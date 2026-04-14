@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Fixture — Suspicious Stress Test (25 elements)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1e293b; }
+
+    .site-header { background: #1a1a2e; color: white; padding: 14px 24px; }
+    .site-header .logo { font-size: 20px; font-weight: 800; }
+    .site-header .logo span { color: #4ade80; }
+
+    .container { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    .container > h1 { font-size: 22px; margin-bottom: 6px; }
+    .container > p { font-size: 14px; color: #64748b; margin-bottom: 20px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="site-header">
+  <span class="logo">APK<span>Mirror</span></span>
+</div>
+
+<div class="container">
+  <h1>Download SuperApp v5.0</h1>
+  <p>Your file is ready for download.</p>
+  <div class="grid">
+
+    <!-- 1: Classic fake download button (green, mimics real) -->
+    <div data-ad style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:8px;">Sponsored</p>
+      <a href="https://ad.example.com/track?click=1" target="_blank"
+         style="display:block; padding:14px; background:linear-gradient(135deg,#22c55e,#16a34a); color:white; text-decoration:none; border-radius:8px; font-size:16px; font-weight:700; text-align:center;">
+        Download Now
+      </a>
+    </div>
+
+    <!-- 2: Urgent red banner -->
+    <div data-ad style="background:#fef2f2; border:2px solid #fca5a5; border-radius:10px; padding:20px;">
+      <p style="font-size:13px; font-weight:700; color:#dc2626; margin-bottom:10px;">⚠ UPDATE REQUIRED</p>
+      <a href="https://malware.example.com/installer.exe" target="_blank"
+         style="display:block; padding:12px; background:#dc2626; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; text-align:center;">
+        Install Critical Update Now
+      </a>
+    </div>
+
+    <!-- 3: Fake virus alert -->
+    <div data-ad style="background:#1a1a2e; border-radius:10px; padding:20px; color:white;">
+      <p style="font-size:14px; font-weight:700; color:#f87171; margin-bottom:10px;">⛔ WARNING: Virus Detected!</p>
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">Your device may be at risk. Scan now to remove threats.</p>
+      <a href="https://ad.example.com/antivirus" target="_blank"
+         style="display:block; padding:12px; background:#ef4444; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; text-align:center;">
+        Clean Now — Free Scan
+      </a>
+    </div>
+
+    <!-- 4: VPN ad (trust/authority style) -->
+    <div data-ad style="background:linear-gradient(135deg,#1e3a5f,#0f172a); border-radius:10px; padding:20px; color:white;">
+      <p style="font-size:11px; color:#64748b; margin-bottom:6px;">Advertisement</p>
+      <p style="font-size:16px; font-weight:700; margin-bottom:10px;">🛡 Protect Your Privacy</p>
+      <a href="https://ad.example.com/vpn" target="_blank"
+         style="display:block; padding:12px; background:#3b82f6; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; text-align:center;">
+        Download Free VPN
+      </a>
+    </div>
+
+    <!-- 5: Cleaner/optimizer scam -->
+    <div data-ad style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+      <p style="font-size:14px; font-weight:700; color:#ea580c; margin-bottom:8px;">Your Computer is Slow!</p>
+      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Fix performance issues with one click.</p>
+      <a href="https://ad.example.com/cleaner" target="_blank"
+         style="display:block; padding:12px; background:#f97316; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; text-align:center;">
+        Speed Up Now — Free
+      </a>
+    </div>
+
+    <!-- 6: Notification permission trick -->
+    <div data-ad style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px;">
+      <p style="font-size:13px; color:#475569; margin-bottom:12px;">This site wants to send you notifications</p>
+      <div style="display:flex; gap:8px;">
+        <button onclick="void(0)" style="flex:1; padding:10px; background:#3b82f6; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600;">Allow</button>
+        <button onclick="void(0)" style="flex:1; padding:10px; background:#e2e8f0; color:#475569; border:none; border-radius:6px; font-size:13px; cursor:pointer;">Block</button>
+      </div>
+    </div>
+
+    <!-- 7: Fake system dialog -->
+    <div data-ad style="background:white; border:1px solid #d1d5db; border-radius:10px; padding:16px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <span style="font-size:18px;">🔒</span>
+        <p style="font-size:13px; font-weight:600;">Security Certificate Expired</p>
+      </div>
+      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Click below to renew your browser security certificate.</p>
+      <a href="https://ad.example.com/cert" target="_blank"
+         style="display:block; padding:10px; background:#1d4ed8; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
+        Renew Certificate
+      </a>
+    </div>
+
+    <!-- 8: Prize/giveaway -->
+    <div data-ad style="background:linear-gradient(135deg,#fbbf24,#f59e0b); border-radius:10px; padding:20px; color:#1e293b;">
+      <p style="font-size:16px; font-weight:800; margin-bottom:6px;">🎉 Congratulations!</p>
+      <p style="font-size:13px; margin-bottom:12px;">You've been selected for a special offer. Claim your reward now.</p>
+      <a href="https://ad.example.com/prize" target="_blank"
+         style="display:block; padding:12px; background:#1e293b; color:#fbbf24; text-decoration:none; border-radius:6px; font-size:14px; font-weight:700; text-align:center;">
+        Claim Reward
+      </a>
+    </div>
+
+    <!-- 9: Fake file ready -->
+    <div data-ad style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08); text-align:center;">
+      <p style="font-size:32px; margin-bottom:8px;">📁</p>
+      <p style="font-size:14px; font-weight:600; margin-bottom:4px;">Your Download is Ready!</p>
+      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">superapp-v5.0-setup.exe (2.4 MB)</p>
+      <a href="https://ad.example.com/offer" target="_blank"
+         style="display:block; padding:12px; background:#22c55e; color:white; text-decoration:none; border-radius:8px; font-size:15px; font-weight:700;">
+        Start Download
+      </a>
+    </div>
+
+    <!-- 10: Browser extension push -->
+    <div data-ad style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:20px;">
+      <p style="font-size:13px; font-weight:600; color:#0369a1; margin-bottom:8px;">Recommended Extension</p>
+      <p style="font-size:12px; color:#475569; margin-bottom:12px;">Add Privacy Guard to protect your browsing. 4.8★ (12k reviews)</p>
+      <a href="https://ad.example.com/extension" target="_blank"
+         style="display:block; padding:10px; background:#0284c7; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
+        Add to Chrome — Free
+      </a>
+    </div>
+
+    <!-- 11: Countdown urgency -->
+    <div data-ad style="background:#1e293b; border-radius:10px; padding:20px; color:white; text-align:center;">
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:4px;">OFFER EXPIRES IN</p>
+      <p style="font-size:28px; font-weight:800; font-family:monospace; color:#f87171; margin-bottom:12px;">04:59</p>
+      <a href="https://ad.example.com/countdown" target="_blank"
+         style="display:block; padding:12px; background:#ef4444; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600;">
+        Get 90% Off Now
+      </a>
+    </div>
+
+    <!-- 12: Fake chat support -->
+    <div data-ad style="background:white; border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <div style="width:32px; height:32px; background:#22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:14px;">💬</div>
+        <div>
+          <p style="font-size:13px; font-weight:600;">Support Agent</p>
+          <p style="font-size:11px; color:#22c55e;">● Online now</p>
+        </div>
+      </div>
+      <p style="font-size:12px; color:#475569; background:#f1f5f9; padding:8px; border-radius:6px; margin-bottom:10px;">Hi! Need help downloading? Click below for faster speeds.</p>
+      <a href="https://ad.example.com/chat" target="_blank"
+         style="display:block; padding:10px; background:#22c55e; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
+        Get Fast Download
+      </a>
+    </div>
+
+    <!-- 13: Cookie consent mimic -->
+    <div data-ad style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
+      <p style="font-size:13px; color:#475569; margin-bottom:10px;">We use cookies to improve your experience. Accept all to continue downloading.</p>
+      <button onclick="void(0)" style="width:100%; padding:10px; background:#3b82f6; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600;">
+        Accept All & Continue
+      </button>
+    </div>
+
+    <!-- 14: Age verification gate -->
+    <div data-ad style="background:#1e293b; border-radius:10px; padding:20px; color:white; text-align:center;">
+      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Age Verification Required</p>
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">You must be 18+ to download this content.</p>
+      <button onclick="void(0)" style="width:100%; padding:12px; background:#7c3aed; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600;">
+        I am 18+ — Continue
+      </button>
+    </div>
+
+    <!-- 15: Fake CAPTCHA -->
+    <div data-ad style="background:white; border:2px solid #e2e8f0; border-radius:10px; padding:20px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <div style="width:28px; height:28px; border:2px solid #d1d5db; border-radius:4px;"></div>
+        <p style="font-size:14px; color:#374151;">I'm not a robot</p>
+      </div>
+      <a href="https://ad.example.com/captcha" target="_blank"
+         style="display:block; padding:10px; background:#4b5563; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
+        Verify & Download
+      </a>
+    </div>
+
+    <!-- 16: Streaming/media player fake -->
+    <div data-ad style="background:#000; border-radius:10px; padding:20px; text-align:center; position:relative;">
+      <div style="width:100%; height:100px; background:#111; border-radius:6px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;">
+        <span style="font-size:36px; color:white; opacity:0.8;">▶</span>
+      </div>
+      <a href="https://ad.example.com/player" target="_blank"
+         style="display:block; padding:10px; background:#ef4444; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600;">
+        Click to Play — Install Plugin Required
+      </a>
+    </div>
+
+    <!-- 17: Survey gate -->
+    <div data-ad style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe); border-radius:10px; padding:20px;">
+      <p style="font-size:14px; font-weight:700; color:#4338ca; margin-bottom:8px;">Quick Survey</p>
+      <p style="font-size:12px; color:#6366f1; margin-bottom:12px;">Complete a 30-second survey to unlock your download.</p>
+      <a href="https://ad.example.com/survey" target="_blank"
+         style="display:block; padding:12px; background:#4f46e5; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; text-align:center;">
+        Start Survey
+      </a>
+    </div>
+
+    <!-- 18: Fake Windows notification -->
+    <div data-ad style="background:white; border-left:4px solid #3b82f6; border-radius:4px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+        <span style="font-size:14px;">🪟</span>
+        <p style="font-size:11px; color:#94a3b8;">System Notification</p>
+      </div>
+      <p style="font-size:13px; font-weight:600; margin-bottom:4px;">Windows Defender — Action Required</p>
+      <p style="font-size:12px; color:#64748b; margin-bottom:10px;">Your firewall subscription has expired.</p>
+      <a href="https://ad.example.com/defender" target="_blank"
+         style="display:block; padding:10px; background:#0078d4; color:white; text-decoration:none; border-radius:4px; font-size:13px; font-weight:600; text-align:center;">
+        Renew Now
+      </a>
+    </div>
+
+    <!-- 19: Fake app store listing -->
+    <div data-ad style="background:white; border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+      <div style="display:flex; gap:12px; margin-bottom:12px;">
+        <div style="width:48px; height:48px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); border-radius:12px;"></div>
+        <div>
+          <p style="font-size:14px; font-weight:600;">SpeedBoost Pro</p>
+          <p style="font-size:11px; color:#64748b;">★★★★★ 4.9 · 500K+ installs</p>
+        </div>
+      </div>
+      <a href="https://ad.example.com/appstore" target="_blank"
+         style="display:block; padding:10px; background:#22c55e; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
+        Install Free
+      </a>
+    </div>
+
+    <!-- 20: Fake login required -->
+    <div data-ad style="background:#fafafa; border:1px solid #e5e7eb; border-radius:10px; padding:20px;">
+      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Sign in to Download</p>
+      <p style="font-size:12px; color:#6b7280; margin-bottom:12px;">Create a free account to access this file.</p>
+      <a href="https://ad.example.com/login" target="_blank"
+         style="display:block; padding:12px; background:#111827; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; text-align:center;">
+        Sign In with Google
+      </a>
+    </div>
+
+    <!-- 21: Bandwidth/speed trick -->
+    <div data-ad style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08); text-align:center;">
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:4px;">Current speed</p>
+      <p style="font-size:24px; font-weight:800; color:#dc2626; margin-bottom:4px;">0.3 MB/s</p>
+      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Upgrade for faster downloads</p>
+      <a href="https://ad.example.com/speed" target="_blank"
+         style="display:block; padding:10px; background:#16a34a; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600;">
+        Boost Speed — Free Trial
+      </a>
+    </div>
+
+    <!-- 22: Fake terms acceptance -->
+    <div data-ad style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px;">
+      <p style="font-size:12px; color:#6b7280; margin-bottom:10px;">By clicking below, you agree to install the SearchBar helper and accept the <a href="#" style="color:#3b82f6;">Terms of Service</a>.</p>
+      <button onclick="void(0)" style="width:100%; padding:12px; background:#22c55e; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600;">
+        Agree & Download
+      </button>
+    </div>
+
+    <!-- 23: Mobile app redirect -->
+    <div data-ad style="background:linear-gradient(135deg,#0f172a,#1e3a5f); border-radius:10px; padding:20px; color:white;">
+      <p style="font-size:14px; font-weight:700; margin-bottom:6px;">📱 Better on the App</p>
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">Get the SuperApp mobile companion for a seamless experience.</p>
+      <a href="https://ad.example.com/mobile" target="_blank"
+         style="display:block; padding:10px; background:white; color:#1e293b; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
+        Open in App Store
+      </a>
+    </div>
+
+    <!-- 24: Fake progress bar -->
+    <div data-ad style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+      <p style="font-size:13px; font-weight:600; margin-bottom:10px;">Preparing your download...</p>
+      <div style="height:6px; background:#e5e7eb; border-radius:3px; margin-bottom:12px; overflow:hidden;">
+        <div style="width:73%; height:100%; background:#3b82f6; border-radius:3px;"></div>
+      </div>
+      <a href="https://adnetwork.example.com/redir" target="_blank"
+         style="display:block; padding:10px; background:#3b82f6; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
+        Click Here if Download Doesn't Start
+      </a>
+    </div>
+
+    <!-- 25: Fake QR code scan -->
+    <div data-ad style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08); text-align:center;">
+      <div style="width:80px; height:80px; background:#f3f4f6; border:2px solid #d1d5db; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#9ca3af;">QR Code</div>
+      <p style="font-size:13px; font-weight:600; margin-bottom:4px;">Scan to Download</p>
+      <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Or click below for direct download</p>
+      <a href="https://ad.example.com/qr" target="_blank"
+         style="display:block; padding:10px; background:#111827; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600;">
+        Direct Download
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
