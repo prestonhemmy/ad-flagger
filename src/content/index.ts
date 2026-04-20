@@ -30,11 +30,14 @@ const SAFE_IFRAME_HOSTS = new Set([
 // frame-specific ID offset (top-level = 0, subframes > 0)
 let idOffset = 0;
 
-// maps packet IDs to DOM elements
+// maps packet IDs to their corresponding DOM elements
 let elementMap = new Map<number, HTMLElement>();
 let detectionActive = false;
 let adObserver: MutationObserver | null = null;
 let debugMode = false;
+
+// maps packet IDs to the nearest ad container selector
+let containerSelectorMap = new Map<number, string>();
 
 // --- Overlay / highlight state ---
 
@@ -76,17 +79,7 @@ function getVisibleRect(el: HTMLElement): DOMRect {
         parent = parent.offsetParent as HTMLElement | null;
     }
 
-    // clip to viewport
-    const top = Math.max(rect.top, 0);
-    const left = Math.max(rect.left, 0);
-    const bottom = Math.min(rect.bottom, window.innerHeight);
-    const right = Math.min(rect.right, window.innerWidth);
-
-    if (right <= left || bottom <= top) {
-        return new DOMRect(left, top, 0, 0); // zero-size rect
-    }
-
-    return new DOMRect(left, top, right - left, bottom - top);
+    return rect;
 }
 
 function positionOverlay(el: HTMLElement, overlay: HTMLDivElement) {
@@ -106,8 +99,22 @@ function positionOverlay(el: HTMLElement, overlay: HTMLDivElement) {
 }
 
 function repositionAllOverlays() {
-    for (const { el, overlay } of overlayMap.values()) {
-        positionOverlay(el, overlay);
+    for (const [id, entry] of overlayMap) {
+        // if the element became detached, try to re-locate it
+        if (!entry.el.isConnected) {
+            const container = findLiveAdContainer(id);
+            if (container) {
+                entry.el.classList.remove("suspicious-ui-detector-highlighted");
+                container.classList.add("suspicious-ui-detector-highlighted");
+                entry.el = container;
+            } else {
+                // o.w. container no longer exists then remove overlay entirely
+                removeOverlay(id);
+                continue;
+            }
+        }
+
+        positionOverlay(entry.el, entry.overlay);
     }
 }
 
@@ -129,7 +136,28 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
     }
 
     const rect = el.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) return;
+    if (rect.width === 0 && rect.height === 0) {
+        // if already detached then defer to handleClassification
+        if (!el.isConnected) {
+            return;
+        }
+
+        // if element exists but zero-dim then retry when it has dimensions
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.contentRect.width > 0 || entry.contentRect.height > 0) {
+                    observer.disconnect();
+                    highlightElement(id, el, explanation);
+                    return;
+                }
+            }
+        });
+
+        observer.observe(el);
+
+        setTimeout(() => observer.disconnect(), 10000); // stop retrying after 10s
+        return;
+    }
 
     flaggedElements.add(el);
     el.classList.add("suspicious-ui-detector-highlighted");
@@ -197,7 +225,28 @@ function runPipeline(): ExtractionResult {
 
     elementMap = buildElementMap(candidates, idOffset);
 
+    // store each candidate's nearest ad container
+    containerSelectorMap = new Map();
+    for (const [id, el] of elementMap) {
+        const container = el.closest(DEFAULT_CONFIG.adContainerSelectors) as HTMLElement | null;
+        if (container) {
+            const sel = buildContainerSelector(container);
+            if (sel) containerSelectorMap.set(id, sel);
+        }
+    }
+
     return result;
+}
+
+function buildContainerSelector(container: HTMLElement): string | null {
+    if (container.id) return `#${CSS.escape(container.id)}`;
+
+    // build attribute selector from ad container selectors matched on
+    for (const sel of DEFAULT_CONFIG.adContainerSelectors.split(", ")) {
+        if (container.matches(sel)) return sel;
+    }
+
+    return null;
 }
 
 /**
@@ -209,11 +258,6 @@ function handleClassifications(classifications: ClassificationResult[]): void {
     for (const result of classifications) {
         const elem = elementMap.get(result.id);
         if (!elem) continue;
-
-        console.debug(
-            `#${result.id} <${elem.tagName.toLowerCase()}>`,
-            `classified as ${result.category} (${result.confidence})`,
-        );
 
         if (result.category !== "benign") {
             // Remove debug overlay before adding the real suspicious one
@@ -228,7 +272,18 @@ function handleClassifications(classifications: ClassificationResult[]): void {
                     () => void chrome.runtime.lastError
                 );
             } else {
-                highlightElement(result.id, elem, result.explanation);
+                // If the element is detached, fall back to its ad container
+                let target = elem;
+                if (!elem.isConnected) {
+                    const container = findLiveAdContainer(result.id);
+                    if (!container) {
+                        continue;
+                    }
+
+                    target = container;
+                }
+
+                highlightElement(result.id, target, result.explanation);
             }
         } else if (debugOverlayIds.has(result.id)) {
             // Transition pending → safe (green), then fade out
@@ -250,6 +305,22 @@ function handleClassifications(classifications: ClassificationResult[]): void {
             }
         }
     }
+}
+
+/**
+ * Helper function that looks up selector for a given packet ID and requeries to
+ * find the current live container.
+ */
+function findLiveAdContainer(id: number): HTMLElement | null {
+    const selector = containerSelectorMap.get(id);
+    if (!selector) return null;
+
+    const container = document.querySelector<HTMLElement>(selector);
+    if (container && container.isConnected) {
+        return container;
+    }
+
+    return null;
 }
 
 // --- Clear all highlights ---
@@ -302,10 +373,6 @@ function observeAdContainers() {
 
         if (newCandidates.length === 0) return;
 
-        console.debug(
-            `[suspicious-ui-detector] MutationObserver found ${newCandidates.length} new candidates`
-        );
-
         const result = extractEvidence(newCandidates, DEFAULT_CONFIG);
 
         // apply frame-specific ID offset
@@ -321,6 +388,12 @@ function observeAdContainers() {
 
         for (const [id, el] of newMap) {
             elementMap.set(id, el);
+
+            const container = el.closest(DEFAULT_CONFIG.adContainerSelectors) as HTMLElement | null;
+            if (container) {
+                const sel = buildContainerSelector(container);
+                if (sel) containerSelectorMap.set(id, sel);
+            }
         }
 
         // resolve existing packet IDs
@@ -386,6 +459,9 @@ if ((window as any).__suspiciousUiDetectorRan) {
         window.addEventListener("resize", repositionAllOverlays, { passive: true });
 
         chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+            console.debug(`[suspicious-ui-detector] content received message:`, message.type,
+                message.type === "classificationResult" ? `#${message.result?.id} ${message.result?.category}` : "");
+
             // listen for toggle messages from the background worker
             if (message.type === "classificationStarted") {
                 if (debugOverlayIds.has(message.id)) {
