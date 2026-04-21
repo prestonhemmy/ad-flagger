@@ -3,21 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>APKMirror — SuperApp v5.0</title>
+  <title>Test Fixture — Benign Stress Test (20 elements)</title>
   <style>
     * { box-sizing: border-box; margin: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1e293b; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1e293b; padding: 0; }
 
-    .site-header { background: #1a1a2e; color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
-    .site-header .logo { font-size: 20px; font-weight: 800; }
+    .site-header { background: #1a1a2e; color: white; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .site-header .logo { font-size: 18px; font-weight: 800; }
     .site-header .logo span { color: #4ade80; }
-    .site-header nav a { color: #94a3b8; text-decoration: none; font-size: 13px; margin-left: 16px; }
+    .site-header nav a { color: #94a3b8; text-decoration: none; font-size: 12px; margin-left: 14px; }
 
-    .container { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    .container { max-width: 1200px; margin: 16px auto; padding: 0 16px; }
+    .page-title { font-size: 18px; margin-bottom: 2px; }
+    .page-sub { font-size: 12px; color: #64748b; margin-bottom: 14px; }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 
-    .site-footer { text-align: center; padding: 24px; font-size: 12px; color: #94a3b8; margin-top: 24px; }
+    .card { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+    .card h3 { font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #1e293b; }
+    .card p { font-size: 11px; color: #64748b; margin-bottom: 10px; line-height: 1.4; flex: 1; }
+    .card a, .card button {
+      display: block; padding: 8px 10px; border-radius: 5px;
+      font-size: 12px; font-weight: 500; text-align: center;
+      text-decoration: none; border: 1px solid #e2e8f0;
+      background: #f1f5f9; color: #3b82f6; cursor: pointer;
+      width: 100%; box-sizing: border-box;
+    }
+    .card a.primary, .card button.primary { background: #3b82f6; color: white; border-color: #3b82f6; font-weight: 600; }
+    .card a.subtle, .card button.subtle { color: #475569; }
+    .card a.danger-link { color: #dc2626; border-color: #fecaca; }
+
+    .site-footer { text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -34,291 +50,50 @@
 </div>
 
 <div class="container">
-  <h1 style="font-size:22px; margin-bottom:6px;">Download SuperApp v5.0</h1>
-  <p style="font-size:14px; color:#64748b; margin-bottom:20px;">Version 5.0 · 24.1 MB · Updated Jan 15, 2025</p>
-
-  <div class="grid">
-
-    <!-- 1: Real download button (first-party, actual file) -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:12px;">SuperApp v5.0</p>
-      <a href="/files/superapp-5.0.apk" download
-         style="display:block; padding:12px; background:#3b82f6; color:white; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; text-align:center;">
-        Download APK (24.1 MB)
-      </a>
-    </div>
-
-    <!-- 2: Navigation link -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Browse All Versions</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">View changelog and download older releases.</p>
-      <a href="/superapp/versions"
-         style="display:block; padding:10px; background:#f1f5f9; color:#3b82f6; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        Version Archive
-      </a>
-    </div>
-
-    <!-- 3: FAQ / Help link -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Need Help?</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Having trouble installing? Check our FAQ for common solutions.</p>
-      <a href="/faq"
-         style="display:block; padding:10px; background:#f1f5f9; color:#3b82f6; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        View FAQ
-      </a>
-    </div>
-
-    <!-- 4: First-party upsell -->
-    <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe); border-radius:10px; padding:20px; border:1px solid #bfdbfe;">
-      <p style="font-size:14px; font-weight:700; color:#1d4ed8; margin-bottom:8px;">⚡ Try SuperApp Pro</p>
-      <p style="font-size:12px; color:#3b82f6; margin-bottom:12px;">No ads, faster sync, priority support. 7-day free trial.</p>
-      <a href="/superapp/pro"
-         style="display:block; padding:10px; background:#2563eb; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
-        Upgrade to Pro
-      </a>
-    </div>
-
-    <!-- 5: App store link (Google Play) -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <div style="display:flex; gap:12px; margin-bottom:12px;">
-        <div style="width:48px; height:48px; background:#f1f5f9; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">📱</div>
-        <div>
-          <p style="font-size:14px; font-weight:600;">Get it on Google Play</p>
-          <p style="font-size:11px; color:#64748b;">Official listing with auto-updates</p>
-        </div>
-      </div>
-      <a href="https://play.google.com/store/apps/details?id=com.superapp"
-         style="display:block; padding:10px; background:#1a1a2e; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
-        View on Play Store
-      </a>
-    </div>
-
-    <!-- 6: Newsletter subscribe -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Stay Updated</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Get notified when new versions of SuperApp are released.</p>
-      <button onclick="alert('subscribed')" style="width:100%; padding:10px; background:#8b5cf6; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600;">
-        Subscribe to Updates
-      </button>
-    </div>
-
-    <!-- 7: Share button -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Share This App</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Know someone who'd find this useful?</p>
-      <button onclick="alert('shared')" style="width:100%; padding:10px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">
-        Copy Link
-      </button>
-    </div>
-
-    <!-- 8: Feedback / Report -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Report an Issue</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Found a broken link or incorrect info? Let us know.</p>
-      <a href="/support"
-         style="display:block; padding:10px; background:#f1f5f9; color:#dc2626; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #fecaca;">
-        Report Problem
-      </a>
-    </div>
-
-    <!-- 9: Alternative download mirror -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Alternative Download</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Mirror hosted on download.apkmirror.com</p>
-      <a href="https://download.apkmirror.com/files/superapp-5.0.apk" download
-         style="display:block; padding:10px; background:#f1f5f9; color:#3b82f6; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        Download from Mirror
-      </a>
-    </div>
-
-    <!-- 10: Permissions info -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:10px;">Permissions</p>
-      <ul style="font-size:12px; color:#64748b; padding-left:16px; margin-bottom:12px; line-height:1.8;">
-        <li>Camera</li>
-        <li>Storage</li>
-        <li>Internet</li>
-      </ul>
-      <a href="/superapp/permissions"
-         style="display:block; padding:10px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        View All Permissions
-      </a>
-    </div>
-
-    <!-- 11: User review -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-        <div style="width:32px; height:32px; background:#e2e8f0; border-radius:50%;"></div>
-        <div>
-          <p style="font-size:13px; font-weight:600;">Alex M.</p>
-          <p style="font-size:11px; color:#f59e0b;">★★★★★</p>
-        </div>
-      </div>
-      <p style="font-size:12px; color:#475569; margin-bottom:10px;">"Great app, works perfectly on my Pixel 8. Highly recommend."</p>
-      <button onclick="alert('helpful')" style="padding:6px 14px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:4px; font-size:11px; cursor:pointer;">
-        Helpful (42)
-      </button>
-    </div>
-
-    <!-- 12: Related app -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">You might also like</p>
-      <div style="display:flex; gap:12px; margin-bottom:12px;">
-        <div style="width:40px; height:40px; background:linear-gradient(135deg,#f97316,#ea580c); border-radius:10px;"></div>
-        <div>
-          <p style="font-size:13px; font-weight:600;">MegaTools</p>
-          <p style="font-size:11px; color:#64748b;">★★★★☆ 4.2 · Free</p>
-        </div>
-      </div>
-      <a href="/apps/megatools"
-         style="display:block; padding:10px; background:#f1f5f9; color:#3b82f6; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        View App
-      </a>
-    </div>
-
-    <!-- 13: Developer info -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Developer</p>
-      <p style="font-size:13px; color:#475569; margin-bottom:4px;">SuperApp Inc.</p>
-      <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">Verified developer · 50M+ downloads</p>
-      <a href="/developer/superapp-inc"
-         style="display:block; padding:10px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        More by this Developer
-      </a>
-    </div>
-
-    <!-- 14: Save for later / bookmark -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Save for Later</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Bookmark this page to download on another device.</p>
-      <button onclick="alert('saved')" style="width:100%; padding:10px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">
-        ★ Add to Favorites
-      </button>
-    </div>
-
-    <!-- 15: Changelog -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:10px;">What's New in v5.0</p>
-      <ul style="font-size:12px; color:#475569; padding-left:16px; line-height:1.8; margin-bottom:12px;">
-        <li>Redesigned settings page</li>
-        <li>Dark mode support</li>
-        <li>Performance improvements</li>
-      </ul>
-      <a href="/superapp/changelog"
-         style="display:block; padding:10px; background:#f1f5f9; color:#3b82f6; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        Full Changelog
-      </a>
-    </div>
-
-    <!-- 16: Screenshot gallery -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:10px;">Screenshots</p>
-      <div style="display:flex; gap:6px; margin-bottom:12px;">
-        <div style="width:60px; height:100px; background:#e2e8f0; border-radius:6px;"></div>
-        <div style="width:60px; height:100px; background:#e2e8f0; border-radius:6px;"></div>
-        <div style="width:60px; height:100px; background:#e2e8f0; border-radius:6px;"></div>
-      </div>
-      <a href="/superapp/screenshots"
-         style="display:block; padding:10px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        View All Screenshots
-      </a>
-    </div>
-
-    <!-- 17: Device compatibility -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:10px;">Compatibility</p>
-      <p style="font-size:12px; color:#475569; line-height:1.6; margin-bottom:12px;">
-        Requires Android 8.0+<br>
-        50 MB free storage<br>
-        ARM64 architecture
-      </p>
-      <a href="/superapp/compatibility"
-         style="display:block; padding:10px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        Check Your Device
-      </a>
-    </div>
-
-    <!-- 18: Contact developer -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Contact Support</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Have questions about SuperApp? Reach out to the developer.</p>
-      <a href="mailto:support@superapp.example.com"
-         style="display:block; padding:10px; background:#f1f5f9; color:#3b82f6; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        Email Developer
-      </a>
-    </div>
-
-    <!-- 19: Privacy policy -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Privacy & Data</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">This app collects usage analytics and crash reports. No personal data is shared with third parties.</p>
-      <a href="/superapp/privacy"
-         style="display:block; padding:10px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #e2e8f0;">
-        Privacy Policy
-      </a>
-    </div>
-
-    <!-- 20: Leave a review -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Rate This App</p>
-      <p style="font-size:20px; margin-bottom:8px;">☆☆☆☆☆</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Help others by sharing your experience.</p>
-      <button onclick="alert('review')" style="width:100%; padding:10px; background:#3b82f6; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600;">
-        Write a Review
-      </button>
-    </div>
-
-    <!-- 21: DMCA / takedown -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">Copyright Notice</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">If you believe this listing infringes your rights, file a takedown request.</p>
-      <a href="/dmca"
-         style="display:block; padding:10px; background:#f1f5f9; color:#dc2626; text-decoration:none; border-radius:6px; font-size:13px; font-weight:500; text-align:center; border:1px solid #fecaca;">
-        File DMCA Request
-      </a>
-    </div>
-
-    <!-- 22: RSS feed -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:8px;">RSS Feed</p>
-      <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Subscribe to get notified of all new uploads via your feed reader.</p>
-      <a href="/rss/superapp"
-         style="display:block; padding:10px; background:#f97316; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
-        Subscribe via RSS
-      </a>
-    </div>
-
-    <!-- 23: QR code (legit, same domain) -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08); text-align:center;">
-      <div style="width:80px; height:80px; background:#f3f4f6; border:2px solid #d1d5db; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#9ca3af;">QR Code</div>
-      <p style="font-size:13px; font-weight:600; margin-bottom:4px;">Download on Your Phone</p>
-      <p style="font-size:11px; color:#64748b;">Scan with your phone camera to open this page on mobile.</p>
-    </div>
-
-    <!-- 24: Social links -->
-    <div style="background:white; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-      <p style="font-size:14px; font-weight:600; margin-bottom:12px;">Follow SuperApp</p>
-      <div style="display:flex; gap:8px;">
-        <a href="https://twitter.com/superapp" style="flex:1; padding:8px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:12px; text-align:center; border:1px solid #e2e8f0;">Twitter</a>
-        <a href="https://github.com/superapp" style="flex:1; padding:8px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:12px; text-align:center; border:1px solid #e2e8f0;">GitHub</a>
-        <a href="https://discord.gg/superapp" style="flex:1; padding:8px; background:#f1f5f9; color:#475569; text-decoration:none; border-radius:6px; font-size:12px; text-align:center; border:1px solid #e2e8f0;">Discord</a>
-      </div>
-    </div>
-
-    <!-- 25: Donate / support developer -->
-    <div style="background:linear-gradient(135deg,#fdf4ff,#fae8ff); border:1px solid #e9d5ff; border-radius:10px; padding:20px;">
-      <p style="font-size:14px; font-weight:600; color:#7c3aed; margin-bottom:8px;">Support the Developer</p>
-      <p style="font-size:12px; color:#8b5cf6; margin-bottom:12px;">SuperApp is free and open source. Consider supporting continued development.</p>
-      <a href="/superapp/donate"
-         style="display:block; padding:10px; background:#7c3aed; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:600; text-align:center;">
-        Buy Me a Coffee ☕
-      </a>
-    </div>
-
-  </div>
+  <h1 class="page-title">Download SuperApp v5.0</h1>
+  <p class="page-sub">Version 5.0 · 24.1 MB · Updated Jan 15, 2025</p>
+  <div class="grid" id="grid"></div>
 </div>
 
 <div class="site-footer">&copy; 2025 APKMirror. All rights reserved.</div>
 
+<script>
+  const templates = [
+    { title: 'SuperApp v5.0',         desc: 'Official signed APK, 24.1 MB.',                     tag: 'a',      href: '/files/superapp-5.0.apk',  text: 'Download APK',           cls: 'primary' },
+    { title: 'Browse Versions',       desc: 'View changelog and older releases.',                tag: 'a',      href: '/superapp/versions',       text: 'Version Archive',        cls: '' },
+    { title: 'Need Help?',            desc: 'Common install questions and fixes.',               tag: 'a',      href: '/faq',                     text: 'View FAQ',               cls: '' },
+    { title: 'SuperApp Pro',          desc: 'No ads, faster sync. 7-day free trial.',            tag: 'a',      href: '/superapp/pro',            text: 'Upgrade to Pro',         cls: 'primary' },
+    { title: 'Google Play',           desc: 'Official listing with auto-updates.',               tag: 'a',      href: 'https://play.google.com/store/apps/details?id=com.superapp', text: 'View on Play Store', cls: 'subtle' },
+    { title: 'Stay Updated',          desc: 'Get notified of new releases.',                     tag: 'button', href: null,                       text: 'Subscribe',              cls: '' },
+    { title: 'Share This App',        desc: "Know someone who'd find this useful?",              tag: 'button', href: null,                       text: 'Copy Link',              cls: 'subtle' },
+    { title: 'Report an Issue',       desc: 'Found a broken link? Let us know.',                 tag: 'a',      href: '/support',                 text: 'Report Problem',         cls: 'danger-link' },
+    { title: 'Alternative Mirror',    desc: 'Hosted on download.apkmirror.com.',                 tag: 'a',      href: 'https://download.apkmirror.com/files/superapp-5.0.apk', text: 'Download from Mirror', cls: '' },
+    { title: 'Permissions',           desc: 'Camera, Storage, Internet.',                        tag: 'a',      href: '/superapp/permissions',    text: 'View Permissions',       cls: 'subtle' },
+    { title: 'User Reviews',          desc: '★★★★★ "Works perfectly on my Pixel 8."',          tag: 'button', href: null,                       text: 'Helpful (42)',           cls: 'subtle' },
+    { title: 'Related: MegaTools',    desc: '★★★★☆ 4.2 · Free utility app.',                    tag: 'a',      href: '/apps/megatools',          text: 'View App',               cls: '' },
+    { title: 'Developer',             desc: 'SuperApp Inc. · 50M+ downloads.',                   tag: 'a',      href: '/developer/superapp-inc',  text: 'More by Developer',      cls: 'subtle' },
+    { title: 'Save for Later',        desc: 'Bookmark to download on another device.',           tag: 'button', href: null,                       text: '★ Add to Favorites',     cls: 'subtle' },
+    { title: "What's New in v5.0",    desc: 'Dark mode, perf fixes, redesigned settings.',       tag: 'a',      href: '/superapp/changelog',      text: 'Full Changelog',         cls: '' },
+    { title: 'Screenshots',           desc: 'Preview the app interface.',                        tag: 'a',      href: '/superapp/screenshots',    text: 'View Screenshots',       cls: 'subtle' },
+    { title: 'Compatibility',         desc: 'Android 8.0+, 50 MB free, ARM64.',                  tag: 'a',      href: '/superapp/compatibility',  text: 'Check Your Device',      cls: 'subtle' },
+    { title: 'Contact Support',       desc: 'Have questions? Email the developer.',              tag: 'a',      href: 'mailto:support@superapp.example.com', text: 'Email Developer', cls: '' },
+    { title: 'Privacy & Data',        desc: 'Usage analytics only. No 3rd-party sharing.',       tag: 'a',      href: '/superapp/privacy',        text: 'Privacy Policy',         cls: 'subtle' },
+    { title: 'Rate This App',         desc: 'Help others by sharing your experience.',           tag: 'button', href: null,                       text: 'Write a Review',         cls: 'primary' },
+  ];
+  const grid = document.getElementById('grid');
+  for (let i = 0; i < templates.length; i++) {
+    const t = templates[i];
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<h3>${t.title}</h3><p>${t.desc}</p>`;
+    const el = document.createElement(t.tag);
+    el.textContent = t.text;
+    if (t.cls) el.className = t.cls;
+    if (t.href) el.setAttribute('href', t.href);
+    if (t.tag === 'button') el.setAttribute('onclick', 'void(0)');
+    card.appendChild(el);
+    grid.appendChild(card);
+  }
+</script>
 </body>
 </html>

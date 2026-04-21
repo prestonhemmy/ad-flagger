@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Test Fixture — Suspicious Stress Test (100 elements)</title>
+  <title>Test Fixture — Suspicious Stress Test (20 elements)</title>
   <style>
     body { margin: 0; font-family: sans-serif; padding: 24px; background: #f5f5f5; }
     h1 { text-align: center; }
@@ -36,10 +36,20 @@
     { tag: 'a', href: 'https://ad.example.com/cleaner', text: 'Your Computer is Slow! Fix Now', cls: 'danger' },
     { tag: 'a', href: 'https://ad.example.com/antivirus', text: 'WARNING: Virus Detected! Clean Now', cls: 'danger' },
     { tag: 'button', href: null, text: 'Click Allow to Continue', cls: '' },
+    { tag: 'a', href: 'https://ad.example.com/free', text: 'FREE Download — No Signup!', cls: 'warning' },
+    { tag: 'a', href: 'https://ad.example.com/continue', text: 'Continue to Download', cls: '' },
+    { tag: 'a', href: 'https://ad.example.com/ready', text: '✓ Download Ready — Click Here', cls: 'warning' },
+    { tag: 'a', href: 'https://ad.example.com/secure', text: 'SECURE Download', cls: '' },
+    { tag: 'a', href: 'https://ad.example.com/limited', text: 'Get It Now — Limited Time', cls: 'warning' },
+    { tag: 'button', href: null, text: 'Claim Your Prize!', cls: 'warning' },
+    { tag: 'a', href: 'https://malware.example.com/codec.exe', text: 'Install Required Codec', cls: 'danger' },
+    { tag: 'a', href: 'https://ad.example.com/flash', text: 'Your Flash Player is Outdated — Update', cls: 'warning' },
+    { tag: 'a', href: 'https://ad.example.com/recommended', text: 'Download (Recommended)', cls: '' },
+    { tag: 'button', href: null, text: 'Open File', cls: '' },
   ];
   const grid = document.getElementById('grid');
-  for (let i = 0; i < 100; i++) {
-    const t = templates[i % templates.length];
+  for (let i = 0; i < templates.length; i++) {
+    const t = templates[i];
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.ad = '';
