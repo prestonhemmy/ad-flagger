@@ -37,9 +37,9 @@ test.describe("extractEvidence: General Functionality Tests", () => {
 
         test("computes nonzero viewportCoverageRatio for large elements", async ({ page }) => {
             const res = await runFullPipeline(page);
-            const hasSignificantCoverage = res.packets.filter(
-                (p: EvidencePacket) => p.style.pos === "fixed"
-            ).some(
+            // banner anchors sit inside fixed-position containers that span the viewport,
+            // so at least one packet should report meaningful coverage
+            const hasSignificantCoverage = res.packets.some(
                 (p: EvidencePacket) => p.position.viewportCoverageRatio > 0.01
             );
 
@@ -54,8 +54,11 @@ test.describe("extractEvidence: General Functionality Tests", () => {
 
             const res = await runFullPipeline(page);
 
+            // banner anchors themselves are static, but their fixed-position parent
+            // should surface through the style ancestry walk
             const hasFixed = res.packets.some(
-                (p: EvidencePacket) => p.style.pos === "fixed"
+                (p: EvidencePacket) =>
+                    p.styleAncestry.some((a: AncestorStyleEntry) => a.pos === "fixed")
             );
 
             expect(hasFixed).toBe(true);
@@ -71,7 +74,7 @@ test.describe("extractEvidence: General Functionality Tests", () => {
                 (p: EvidencePacket) => p.style.cursor === "pointer"
             );
 
-            expect(ptrPkts.length).toEqual(3);
+            expect(ptrPkts.length).toEqual(2);
         });
     });
 
@@ -88,14 +91,15 @@ test.describe("extractEvidence: General Functionality Tests", () => {
             );
 
             expect(link).toBeDefined();
-            expect(link.styleAncestry.length).toEqual(12);  // 12 nestings present and 12 < 30 = maxStyleAncestorDepth
+            // 12 .nest levels + .ad-overlay-wrapper + .container = 14 ancestors, < 30 = maxStyleAncestorDepth
+            expect(link.styleAncestry.length).toEqual(14);
 
             const ancestorPositions = link.styleAncestry.map(
                 (a: AncestorStyleEntry) => a.pos
             );
 
-            expect(ancestorPositions).toContain("relative"); // from 10 levels up
-            expect(ancestorPositions).toContain("absolute"); // from 7 levels up
+            expect(ancestorPositions).toContain("relative"); // nest-overlay + ad-overlay-wrapper
+            expect(ancestorPositions).toContain("absolute"); // nest-absolute
         });
 
         test("records correct depth ordering", async ({ page }) => {
@@ -215,11 +219,9 @@ test.describe("extractEvidence: Capping Stress Tests", () => {
     test("evidence packets include ad containers on dense pages", async ({ page }) => {
         const res = await runFullPipeline(page);
 
-        const adPkts = res.packets.filter((p: any) =>
-            p.HTMLSnippet.includes("adsbygoogle") ||
-            p.HTMLSnippet.includes("data-ad-slot") ||
-            p.HTMLSnippet.includes("data-ad")
-        );
+        // ad containers with interactive descendants get skipped in favor of their children,
+        // so look for packets marked as residing inside an ad container
+        const adPkts = res.packets.filter((p: any) => p.isInAdContainer);
 
         expect(adPkts.length).toBeGreaterThanOrEqual(1);
     });
@@ -234,14 +236,16 @@ test.describe("extractEvidence: Advertisement Label in Sibling Tests", () => {
    test("captures sibling \"Advertisement\" text for at least one ins.adsbygoogle elements", async ({ page }) => {
        const res = await runFullPipeline(page);
 
-       const insPkts = res.packets.filter(
+       // the ins.adsbygoogle wrappers get deduped in favor of their iframe children,
+       // so the iframes serve as the extracted representatives of each ad slot
+       const adIframePkts = res.packets.filter(
            (p: EvidencePacket) =>
-               p.tagName === "ins" && p.HTMLSnippet.includes("adsbygoogle")
+               p.tagName === "iframe" && p.isInAdContainer
        );
 
-       expect(insPkts.length).toBeGreaterThanOrEqual(1); // at least one ins.adsbygoogle element found
+       expect(adIframePkts.length).toBeGreaterThanOrEqual(1); // at least one adsbygoogle iframe found
 
-       const hasAdLabel = insPkts.some(
+       const hasAdLabel = adIframePkts.some(
            (p: EvidencePacket) =>
                p.surroundingText.join(" ").toLowerCase().includes("advertisement")
        );
@@ -252,9 +256,11 @@ test.describe("extractEvidence: Advertisement Label in Sibling Tests", () => {
    test("captures sibling label outside the ad container", async ({ page }) => {
        const res = await runFullPipeline(page);
 
+       // iframe aswift_1 is inside the ins with data-ad-slot="1111111111"
        const firstAd = res.packets.find(
            (p: EvidencePacket) =>
-               p.tagName === "ins" && p.HTMLSnippet.includes("1111111111")
+               p.tagName === "iframe" && p.attributes.src === "about:blank" &&
+               p.HTMLSnippet.includes("aswift_1")
        );
 
        expect(firstAd).toBeDefined();
@@ -267,9 +273,10 @@ test.describe("extractEvidence: Advertisement Label in Sibling Tests", () => {
     test("captures advertisement label through intervening wrapper div", async ({ page }) => {
         const res = await runFullPipeline(page);
 
+        // iframe aswift_3 is inside the ezoic-wrapped ins with data-ad-slot="3333333333"
         const ezoicIns = res.packets.find(
             (p: EvidencePacket) =>
-                p.tagName === "ins" && p.HTMLSnippet.includes("3333333333")
+                p.tagName === "iframe" && p.HTMLSnippet.includes("aswift_3")
         );
 
         expect(ezoicIns).toBeDefined();

@@ -134,7 +134,8 @@ describe("EvidencePacket", () => {
         expect(typeof pkt.HTMLSnippet).toBe("string");
         expect(typeof pkt.attributes).toBe("object");
         expect(Array.isArray(pkt.styleAncestry)).toBe(true);
-        expect(typeof pkt.elementText).toBe("string");
+        expect(Array.isArray(pkt.surroundingText)).toBe(true);
+        expect(pkt.surroundingText.every(s => typeof s === "string")).toBe(true);
         expect(typeof pkt.isInIFrame).toBe("boolean");
 
         // style field
