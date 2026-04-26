@@ -243,7 +243,7 @@ export function enqueuePackets(packets: EvidencePacket[], url: string | undefine
 	const otherEntries: QueueEntry[] = [];
 	for (const packet of packets) {
 		const entry = { packet, url, tabId, gen, tabGen };
-		if (packet.tagName === "iframe" || packet.isInIFrame) {
+		if (packet.isInIFrame) {
 			iframeEntries.push(entry);
 		} else {
 			otherEntries.push(entry);
