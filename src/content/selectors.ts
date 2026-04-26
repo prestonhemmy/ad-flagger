@@ -12,7 +12,7 @@ export function discoverCandidates(
     config: ExtractionConfig = DEFAULT_CONFIG,
 ): HTMLElement[] {
 
-    // Discovery
+    /** === Discovery === */
 
     // query interactive elements first
     const interactive = Array.from(
@@ -34,7 +34,7 @@ export function discoverCandidates(
         }
     }
 
-    // Filtering
+    /** === Filtering === */
 
     const filtered = merged.filter((elem) => {
         // check if ignored tag first to avoid 'getComputedStyle()' and 'getBoundingClientRect()' calls
@@ -61,7 +61,7 @@ export function discoverCandidates(
         return true;
     });
 
-    // Priority Capping
+    /** === Priority Capping === */
 
     const adSet = new Set(adContainers);
 
@@ -78,12 +78,13 @@ export function discoverCandidates(
     const interactiveFiltered: HTMLElement[] = [];
     for (const elem of filtered) {
         if (isAdRelated(elem)) {
-            // Skip ad containers that have interactive descendants already in the
-            // candidate list — the child is the actual suspicious element.
+            // skip ad containers that have interactive descendants already in the
+            // candidate list (the child is the actual suspicious element)
             if (adSet.has(elem) && filteredInteractive.some(child => child !== elem && elem.contains(child))) {
                 continue;
             }
             adFiltered.push(elem);
+
         } else {
             interactiveFiltered.push(elem);
         }
@@ -119,8 +120,9 @@ export function discoverCandidates(
 }
 
 /**
- * Helper that returns true if 'elem' is a same origin link inside a
- * navigation tag (<nav>, <header>, role="navigation").
+ * Returns true if 'elem' is a same-origin link inside a navigation tag
+ * (<nav>, <header>, role="navigation"). These are filtered out as
+ * uninteresting first-party site chrome.
  */
 function isNavigationLink(elem: HTMLElement): boolean {
     if (elem.tagName.toLowerCase() !== "a") return false;

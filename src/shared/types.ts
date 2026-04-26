@@ -1,24 +1,24 @@
 /**
- * This file defines the shape of what the extraction pipeline produces.
- * All fields are non-Optional since they are either required by the SLM
- * for classification, the background service worker for routing or the
- * popup for display.
- * This file also defines the shape of what the SLM produces, where the
- * field 'explanation' is currently optional under the guidelines of our MVP
- * but planned to be made permanent for future stretch goals.
+ * Shared types crossing the extraction / classification / display
+ * boundaries.
+ *
+ * 'EvidencePacket' is the unit of work produced by the content script
+ * and consumed by the SLM in the background worker. 'ClassificationResult'
+ * is the return trip. The 'BackgroundMessage' union covers every
+ * cross-context message the central router accepts.
  */
 
-// Extraction Pipeline
+/** === Extraction Pipeline === */
 
 /**
  * Structured context extracted from a single interactive DOM element.
  * Designed to be token-efficient for SLM consumption.
  */
 export interface EvidencePacket {
-    id: number;                     // incremental ID unique to a given extraction pass
-    tagName: string;                // Ex. "a", "button", "iframe"
-    HTMLSnippet: string;            // truncated outerHTML bounded by 'config.maxSnippetLength'
-    attributes: Record<string, string>; // Ex. { "href": "www.ufl.edu",  "src": *, "alt": *, "title": *,
+    id: number;                         // incremental ID unique to a given extraction pass
+    tagName: string;                    // ex. "a", "button", "iframe"
+    HTMLSnippet: string;                // truncated outerHTML bounded by 'config.maxSnippetLength'
+    attributes: Record<string, string>; // ex. { "href": "www.ufl.edu",  "src": *, "alt": *, "title": *,
                                         // "aria-label": *, "download": *, "target": * }
     style: StyleData;
     position: PositionData;
@@ -66,17 +66,17 @@ export interface ExtractionResult {
     packets: EvidencePacket[];      // capped at 'config.maxElems'
 }
 
-// Classification Pipeline
+/** === Classification Pipeline === */
 
 /** Output of SLM classification on a single 'EvidencePacket' */
 export interface ClassificationResult {
     id: number;                     // corresponds with 'EvidencePacket.id'
-    category: string;               // Ex. "disguised-ad", "visual-interference", "benign"
-    confidence: string;             // Ex. "low", "medium", "high"
+    category: string;               // ex. "disguised-ad", "visual-interference", "benign"
+    confidence: string;             // ex. "low", "medium", "high"
     explanation?: string;           // optional brief SLM rationale
 }
 
-// Message Passing
+/** === Message Passing === */
 
 interface ClassifyMessageType {
     type: "classify";

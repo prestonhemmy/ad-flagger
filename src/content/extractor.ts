@@ -60,7 +60,7 @@ function extractSnippet(elem: HTMLElement, config: ExtractionConfig): string {
 
     // strip elements with ignored tags
     const selector = Array.from(config.ignoredTags).join(", ");
-    for (const node of clone.querySelectorAll(selector)) {      // Consider replacing with 'TreeWalk' for perf
+    for (const node of clone.querySelectorAll(selector)) {
         node.remove();
     }
 

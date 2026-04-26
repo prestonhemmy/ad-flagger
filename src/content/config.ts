@@ -28,9 +28,8 @@ export const DEFAULT_CONFIG: ExtractionConfig = {
     maxSurroundingTextLength: 200,
     maxSurroundingTextFragments: 5,
     maxStyleAncestorDepth: 30,      // fairly high since nestings >25 observed in practice
-                                    //  NOTE: Consider unbounded up to <iframe> or <body> boundary
-    ancestorDepth: 5,               // relative moderate since text labels need not live close by
-    siblingRadius: 3,               //  on sites with deeply nested advertisements
+    ancestorDepth: 5,               // moderate since text labels need not live close to the target
+    siblingRadius: 3,               // suitable for sites with deeply nested ads
     minElemWidth: 10,
     minElemHeight: 10,
     interactiveSelectors: [
@@ -73,22 +72,21 @@ export const DEFAULT_CONFIG: ExtractionConfig = {
 }
 
 /**
- * NOTE: For future parameter tuning, consider the following.
- *   =>  'maxElems' controls the total output volume (i.e. packets x per-packet size
- *       = total token to process) and the total extraction time (since each element
- *       triggers 'getComputedStyle()' + DOM traversal). Also, 'maxElem' determines
- *       if we catch all threats, as well as if we surpass the SLM's context window,
- *       thus 'maxElem' is the most important for tuning.
- *   =>  'maxSnippetLength' is the largest field in most 'EvidencePacket's. There is
- *       a clear tradeoff between capturing enough HTML and surpassing the SLM context
- *       window. Therefore, 'maxSnippetLength' and 'maxElems' are inversely
- *       proportional, and need to be maintained as such
- *   =>  'maxStyleAncestryDepth' = n means adds an additional n 'getComputedStyle()'
- *       calls per element. From empirical research, pointer events tend to
- *       concentrate < 20 levels up from the innermost nested "Download" or other
- *       text so preventing 'getComputedStyle()' calls between say 20 and n could
- *       result in a 1.5x speedup.
- *   =>  'interactiveSelectors' determines recall. So this is a correctness parameter,
- *       rather than a performance parameter. Perform testing by running the extractor
- *       on target sites and manually checking what was missed.
+ * Tuning notes for future parameter sweeps.
+ *   ->  'maxElems' controls the total output volume (i.e. packets x per-packet size
+ *       = total tokens to process) and the total extraction time (since each element
+ *       triggers 'getComputedStyle()' + DOM traversal). Also, 'maxElems' determines
+ *       whether all threats get caught and whether the SLM context window is exceeded,
+ *       which makes it the most impactful knob.
+ *   ->  'maxSnippetLength' is the largest field in most 'EvidencePacket's. There is
+ *       a clear tradeoff between capturing enough HTML and exceeding the SLM context
+ *       window. 'maxSnippetLength' and 'maxElems' are inversely proportional and
+ *       should be tuned together.
+ *   ->  'maxStyleAncestorDepth' = n adds up to n additional 'getComputedStyle()'
+ *       calls per element. Empirically, pointer-events tend to concentrate < 20
+ *       levels above the innermost nested "Download" or similar text, so capping
+ *       between 20 and the current 30 can yield ~1.5x speedup with low recall loss.
+ *   ->  'interactiveSelectors' determines recall, making it a correctness parameter
+ *       rather than a performance parameter. Tune by running the extractor on
+ *       representative sites and manually inspecting what was missed.
  */

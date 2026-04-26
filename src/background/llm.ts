@@ -1,3 +1,17 @@
+/**
+ * Background-side WebLLM driver.
+ *
+ * Owns the SLM engine lifecycle (load / unload / model swap) and consumes
+ * 'EvidencePacket's enqueued by the central message router. Each packet is
+ * compiled into a structured user prompt, sent through the SLM, and the
+ * resulting SUSPICIOUS / SAFE classification is shipped back to the
+ * originating tab as a 'ClassificationResult'.
+ *
+ * Per-tab queues keep the active tab responsive when many tabs are
+ * scanning at once; iframe packets are prioritized within each queue
+ * so cross-frame relays land before top-level highlights.
+ */
+
 import { CreateMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm";
 import { EvidencePacket, ClassificationResult } from "../shared/types";
 import { DEFAULT_MODEL_ID } from "../shared/models";
@@ -36,26 +50,6 @@ let engine: MLCEngineInterface | null = null;
 let engineInitPromise: Promise<MLCEngineInterface> | null = null;
 let generation = 0;
 
-const modelIdReady = new Promise<void>((resolve) => {
-	chrome.storage.local.get(["modelId"], (result) => {
-		if (result.modelId) currentModelId = result.modelId;
-		resolve();
-	});
-});
-
-export async function setModelId(newId: string): Promise<void> {
-	currentModelId = newId;
-	generation++;
-	tabProgress.clear();
-	tabQueues.clear();
-	const oldEngine = engine;
-	engine = null;
-	engineInitPromise = null;
-	if (oldEngine) {
-		try { await oldEngine.unload(); } catch { /* ignore */ }
-	}
-}
-
 export type PipelineStatus =
 	| { stage: "loading"; modelId: string; progress: number }
 	| { stage: "classifying"; total: number; done: number }
@@ -81,6 +75,10 @@ export function setActiveTab(tabId: number) {
 	activeTabId = tabId;
 }
 
+/**
+ * Cancels all pending classifications for a tab. Used when the user
+ * trusts the site or otherwise opts out mid-scan.
+ */
 export function cancelTab(tabId: number) {
 	tabGeneration.set(tabId, (tabGeneration.get(tabId) ?? 0) + 1);
 	tabProgress.delete(tabId);
@@ -88,6 +86,7 @@ export function cancelTab(tabId: number) {
 	tabQueues.delete(tabId);
 }
 
+/** Pushes a status update to the popup and caches it per-tab. */
 function broadcastStatus(status: PipelineStatus, tabId?: number) {
 	if (tabId !== undefined) tabStatus.set(tabId, status);
 	chrome.runtime.sendMessage({ type: "statusUpdate", status, tabId }).catch(() => {});
@@ -97,30 +96,66 @@ export function getStatusForTab(tabId: number): PipelineStatus {
 	return tabStatus.get(tabId) ?? { stage: "done" };
 }
 
+/**
+ * Lazy-loads the SLM engine. Subsequent callers share the same in-flight
+ * load promise so we never trigger more than one model download.
+ */
 export async function getEngine(): Promise<MLCEngineInterface> {
 	await modelIdReady;
 	if (engine) return engine;
 	if (engineInitPromise) return engineInitPromise;
 
-	console.log("[suspicious-ui-detector] loading model:", currentModelId);
+	console.log("[ad-flagger] loading model:", currentModelId);
 	engineInitPromise = CreateMLCEngine(currentModelId, {
 		initProgressCallback: ({ text, progress }) => {
-			console.log(`[suspicious-ui-detector] ${(progress * 100).toFixed(0)}% — ${text}`);
+			console.log(`[ad-flagger] ${(progress * 100).toFixed(0)}% — ${text}`);
 			broadcastStatus({ stage: "loading", modelId: currentModelId, progress });
 		},
 	}).then((e) => {
 		engine = e;
-		console.log("[suspicious-ui-detector] model ready");
+		console.log("[ad-flagger] model ready");
 		return e;
 	}).catch((err) => {
 		engineInitPromise = null;
-		console.error("[suspicious-ui-detector] failed to load model:", err);
+		console.error("[ad-flagger] failed to load model:", err);
 		throw new Error(`Model failed to load: ${err}`);
 	});
 
 	return engineInitPromise;
 }
 
+const modelIdReady = new Promise<void>((resolve) => {
+	chrome.storage.local.get(["modelId"], (result) => {
+		if (result.modelId) currentModelId = result.modelId;
+		resolve();
+	});
+});
+
+/**
+ * Swaps the active SLM. Bumps the generation counter so any in-flight
+ * classifications still queued against the old engine get treated as
+ * stale and skipped. The previous engine is unloaded best-effort.
+ */
+export async function setModelId(newId: string): Promise<void> {
+	currentModelId = newId;
+	generation++;
+	tabProgress.clear();
+	tabQueues.clear();
+	const oldEngine = engine;
+	engine = null;
+	engineInitPromise = null;
+	if (oldEngine) {
+		try { await oldEngine.unload(); } catch { /* ignore */ }
+	}
+}
+
+/**
+ * Compiles an evidence packet into the structured user prompt fed to the
+ * SLM. Aggressively caps lengths so the prompt stays within the SLM
+ * context window even on packets with large HTML snippets or surrounding
+ * text. Adds a same-origin signal when the packet's href shares an eTLD+1
+ * with the page hostname (a strong negative cue for "disguised ad").
+ */
 function buildPrompt(p: EvidencePacket, url?: string): string {
 	const parts: string[] = [];
 	if (url) {
@@ -167,6 +202,10 @@ function isSameSite(href: string, url: string): boolean {
 	}
 }
 
+/**
+ * Runs a single SLM completion and parses the SUSPICIOUS/SAFE verdict
+ * from the trailing word of the response.
+ */
 async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ suspicious: boolean; raw: string }> {
 	const completion = await eng.chat.completions.create({
 		messages: [
@@ -182,8 +221,13 @@ async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ s
 	return { suspicious: lastWord === "SUSPICIOUS", raw };
 }
 
+/**
+ * Adds packets to the per-tab classification queue. Iframe packets jump
+ * to the front so cross-frame relays resolve before any top-level
+ * highlights they need to drive.
+ */
 export function enqueuePackets(packets: EvidencePacket[], url: string | undefined, tabId: number): void {
-	console.log(`[suspicious-ui-detector] enqueuing ${packets.length} packets for tab ${tabId}`);
+	console.log(`[ad-flagger] enqueuing ${packets.length} packets for tab ${tabId}`);
 
 	const gen = generation;
 	const tabGen = tabGeneration.get(tabId) ?? 0;
@@ -217,21 +261,11 @@ export function enqueuePackets(packets: EvidencePacket[], url: string | undefine
 	processQueue();
 }
 
-function pickNext(): QueueEntry | undefined {
-	if (activeTabId !== undefined) {
-		const q = tabQueues.get(activeTabId);
-		if (q && q.length > 0) return q.shift();
-	}
-	for (const [, q] of tabQueues) {
-		if (q.length > 0) return q.shift();
-	}
-	return undefined;
-}
-
-function isEntryStale(entry: QueueEntry): boolean {
-	return entry.gen !== generation || (tabGeneration.get(entry.tabId) ?? 0) !== entry.tabGen;
-}
-
+/**
+ * Drains the global queue serially. Re-loads the engine if the model was
+ * swapped mid-drain and skips any entries that have gone stale during
+ * the wait.
+ */
 async function processQueue(): Promise<void> {
 	if (processingQueue) return;
 	processingQueue = true;
@@ -266,7 +300,7 @@ async function processQueue(): Promise<void> {
 				suspicious = result.suspicious;
 				raw = result.raw;
 			} catch (err) {
-				console.error(`[suspicious-ui-detector] classify error for #${pkt.id}:`, err);
+				console.error(`[ad-flagger] classify error for #${pkt.id}:`, err);
 				raw = String(err);
 			}
 
@@ -275,7 +309,7 @@ async function processQueue(): Promise<void> {
 			const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
 
 			console.log(
-				`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> [${hostname}] → ${suspicious ? "SUSPICIOUS" : "SAFE"}` +
+				`[ad-flagger] #${pkt.id} <${pkt.tagName}> [${hostname}] → ${suspicious ? "SUSPICIOUS" : "SAFE"}` +
 				`\nprompt:\n${prompt}` +
 				`\nresponse:\n${explanation ?? "(empty)"}`
 			);
@@ -303,6 +337,26 @@ async function processQueue(): Promise<void> {
 	} finally {
 		processingQueue = false;
 	}
+}
+
+/**
+ * Picks the next entry to classify. Preference order: active tab first,
+ * then any other tab with pending work.
+ */
+function pickNext(): QueueEntry | undefined {
+	if (activeTabId !== undefined) {
+		const q = tabQueues.get(activeTabId);
+		if (q && q.length > 0) return q.shift();
+	}
+	for (const [, q] of tabQueues) {
+		if (q.length > 0) return q.shift();
+	}
+	return undefined;
+}
+
+/** True if the entry was enqueued before a model swap or tab cancellation. */
+function isEntryStale(entry: QueueEntry): boolean {
+	return entry.gen !== generation || (tabGeneration.get(entry.tabId) ?? 0) !== entry.tabGen;
 }
 
 export const _testing = { buildPrompt, classifyOne, SYSTEM_PROMPT };
