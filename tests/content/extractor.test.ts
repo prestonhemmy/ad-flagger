@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { extractEvidence } from "../../src/content/extractor";
-import { ExtractionConfig, DEFAULT_CONFIG } from "../../src/content/config";
+import { DEFAULT_CONFIG } from "../../src/content/config";
 
 /**
  * Helper function that builds a minimal DOM tree inside a <body> element and

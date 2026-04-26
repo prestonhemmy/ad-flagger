@@ -1,8 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { injectPipeline, runFullPipeline } from "./helpers/inject";
-import {AncestorStyleEntry, EvidencePacket} from "../../src/shared/types";
-import {EventData} from "node:test";
-import {DEFAULT_CONFIG} from "../../src/content/config";
+import { AncestorStyleEntry, EvidencePacket } from "../../src/shared/types";
 
 test.describe("extractEvidence: General Functionality Tests", () => {
 
@@ -132,7 +130,7 @@ test.describe("extractEvidence: General Functionality Tests", () => {
             await injectPipeline(page);
         });
 
-        test("captures ad-realted text", async ({ page }) => {
+        test("captures ad-related text", async ({ page }) => {
             const res = await runFullPipeline(page);
 
             const fakeDownloadPkt = res.packets.find(
@@ -184,37 +182,37 @@ test.describe("extractEvidence: General Functionality Tests", () => {
 });
 
 test.describe("extractEvidence: Capping Stress Tests", () => {
-   test.beforeEach(async ({ page }) => {
-       await page.goto("/high-element-count.html");
-       await injectPipeline(page);
-   });
+    test.beforeEach(async ({ page }) => {
+        await page.goto("/high-element-count.html");
+        await injectPipeline(page);
+    });
 
-   test("fixed top banner has correct positional data on dense page", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    test("fixed top banner has correct positional data on dense page", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       const topBanner = res.packets.find(
-           (p: EvidencePacket) =>
-               p.attributes.href?.includes("ad.example.com/top-banner")
-       );
+        const topBanner = res.packets.find(
+            (p: EvidencePacket) =>
+                p.attributes.href?.includes("ad.example.com/top-banner")
+        );
 
-       expect(topBanner).toBeDefined();
-       expect(topBanner.position.top).toBeLessThan(80);
-       expect(topBanner.position.isInViewport).toBe(true);
-   });
+        expect(topBanner).toBeDefined();
+        expect(topBanner.position.top).toBeLessThan(80);
+        expect(topBanner.position.isInViewport).toBe(true);
+    });
 
-   test("disguised download button packet contains \"download\" in surrounding text", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    test("disguised download button packet contains \"download\" in surrounding text", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       const disguised = res.packets.find(
-           (p: EvidencePacket) =>
-               p.attributes.href?.includes("ad.example.com/disguised-download")
-       );
+        const disguised = res.packets.find(
+            (p: EvidencePacket) =>
+                p.attributes.href?.includes("ad.example.com/disguised-download")
+        );
 
-       expect(disguised).toBeDefined();
+        expect(disguised).toBeDefined();
 
-       const text = disguised.surroundingText.join(" ").toLowerCase();
-       expect(text).toMatch(/download/i);
-   });
+        const text = disguised.surroundingText.join(" ").toLowerCase();
+        expect(text).toMatch(/download/i);
+    });
 
     test("evidence packets include ad containers on dense pages", async ({ page }) => {
         const res = await runFullPipeline(page);
@@ -228,47 +226,47 @@ test.describe("extractEvidence: Capping Stress Tests", () => {
 });
 
 test.describe("extractEvidence: Advertisement Label in Sibling Tests", () => {
-   test.beforeEach(async ({ page }) => {
-       await page.goto("/adsbygoogle-nested.html");
-       await injectPipeline(page);
-   });
+    test.beforeEach(async ({ page }) => {
+        await page.goto("/adsbygoogle-nested.html");
+        await injectPipeline(page);
+    });
 
-   test("captures sibling \"Advertisement\" text for at least one ins.adsbygoogle elements", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    test("captures sibling \"Advertisement\" text for at least one ins.adsbygoogle elements", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       // the ins.adsbygoogle wrappers get deduped in favor of their iframe children,
-       // so the iframes serve as the extracted representatives of each ad slot
-       const adIframePkts = res.packets.filter(
-           (p: EvidencePacket) =>
-               p.tagName === "iframe" && p.isInAdContainer
-       );
+        // the ins.adsbygoogle wrappers get deduped in favor of their iframe children,
+        // so the iframes serve as the extracted representatives of each ad slot
+        const adIframePkts = res.packets.filter(
+            (p: EvidencePacket) =>
+                p.tagName === "iframe" && p.isInAdContainer
+        );
 
-       expect(adIframePkts.length).toBeGreaterThanOrEqual(1); // at least one adsbygoogle iframe found
+        expect(adIframePkts.length).toBeGreaterThanOrEqual(1); // at least one adsbygoogle iframe found
 
-       const hasAdLabel = adIframePkts.some(
-           (p: EvidencePacket) =>
-               p.surroundingText.join(" ").toLowerCase().includes("advertisement")
-       );
+        const hasAdLabel = adIframePkts.some(
+            (p: EvidencePacket) =>
+                p.surroundingText.join(" ").toLowerCase().includes("advertisement")
+        );
 
-       expect(hasAdLabel).toBe(true); // at least one found element has ad surrounding text
-   });
+        expect(hasAdLabel).toBe(true); // at least one found element has ad surrounding text
+    });
 
-   test("captures sibling label outside the ad container", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    test("captures sibling label outside the ad container", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       // iframe aswift_1 is inside the ins with data-ad-slot="1111111111"
-       const firstAd = res.packets.find(
-           (p: EvidencePacket) =>
-               p.tagName === "iframe" && p.attributes.src === "about:blank" &&
-               p.HTMLSnippet.includes("aswift_1")
-       );
+        // iframe aswift_1 is inside the ins with data-ad-slot="1111111111"
+        const firstAd = res.packets.find(
+            (p: EvidencePacket) =>
+                p.tagName === "iframe" && p.attributes.src === "about:blank" &&
+                p.HTMLSnippet.includes("aswift_1")
+        );
 
-       expect(firstAd).toBeDefined();
+        expect(firstAd).toBeDefined();
 
-       const text = firstAd.surroundingText.join(" ").toLowerCase();
+        const text = firstAd.surroundingText.join(" ").toLowerCase();
 
-       expect(text).toContain("advertisement");
-   });
+        expect(text).toContain("advertisement");
+    });
 
     test("captures advertisement label through intervening wrapper div", async ({ page }) => {
         const res = await runFullPipeline(page);
@@ -288,87 +286,87 @@ test.describe("extractEvidence: Advertisement Label in Sibling Tests", () => {
 });
 
 test.describe("extractEvidence: Wrapper Isolated Ad Link Tests", () => {
-   test.beforeEach(async ({ page }) => {
-       await page.goto("/wrapper-isolated-ad.html");
-       await injectPipeline(page);
-   });
+    test.beforeEach(async ({ page }) => {
+        await page.goto("/wrapper-isolated-ad.html");
+        await injectPipeline(page);
+    });
 
-   // the bare minimum
-   test("captures label from parent's <span> sibling", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    // the bare minimum
+    test("captures label from parent's <span> sibling", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       const pkt = res.packets.find(
-           (p: EvidencePacket) => p.attributes.href?.includes("click?id=3")
-       );
+        const pkt = res.packets.find(
+            (p: EvidencePacket) => p.attributes.href?.includes("click?id=3")
+        );
 
-       expect(pkt).toBeDefined();
+        expect(pkt).toBeDefined();
 
-       const text = pkt.surroundingText.join(" ").toLowerCase();
+        const text = pkt.surroundingText.join(" ").toLowerCase();
 
-       expect(text).toContain("advertisement");
-   });
+        expect(text).toContain("advertisement");
+    });
 
-   // more aggressive than previous test case
-   test("captures label from parent's <p> sibling", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    // more aggressive than previous test case
+    test("captures label from parent's <p> sibling", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       const pkt = res.packets.find(
-           (p: EvidencePacket) => p.attributes.href?.includes("click?id=1")
-       );
+        const pkt = res.packets.find(
+            (p: EvidencePacket) => p.attributes.href?.includes("click?id=1")
+        );
 
-       expect(pkt).toBeDefined();
+        expect(pkt).toBeDefined();
 
-       const text = pkt.surroundingText.join(" ").toLowerCase();
+        const text = pkt.surroundingText.join(" ").toLowerCase();
 
-       expect(text).toContain("your file is ready for download");
-   });
+        expect(text).toContain("your file is ready for download");
+    });
 
-   test("captures sibling label inside wrapper", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    test("captures sibling label inside wrapper", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       const pkt = res.packets.find(
-           (p: EvidencePacket) => p.attributes.href?.includes("click?id=2")
-       );
+        const pkt = res.packets.find(
+            (p: EvidencePacket) => p.attributes.href?.includes("click?id=2")
+        );
 
-       expect(pkt).toBeDefined();
+        expect(pkt).toBeDefined();
 
-       const text = pkt.surroundingText.join(" ").toLowerCase();
+        const text = pkt.surroundingText.join(" ").toLowerCase();
 
-       expect(text).toContain("advertisement");
-   });
+        expect(text).toContain("advertisement");
+    });
 });
 
 test.describe("extractEvidence: ATTR_NAMES Tests", () => {
-   test.beforeEach(async ({ page }) => {
-       await page.goto("/adsbygoogle-nested.html");
-       await injectPipeline(page);
-   });
+    test.beforeEach(async ({ page }) => {
+        await page.goto("/adsbygoogle-nested.html");
+        await injectPipeline(page);
+    });
 
-   test("ins.adsbygoogle packets include data-ad-slot in attributes", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    test("ins.adsbygoogle packets include data-ad-slot in attributes", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       const insPackets = res.packets.filter(
-           (p: any) => p.tagName === "ins" && p.HTMLSnippet.includes("adsbygoogle")
-       );
+        const insPackets = res.packets.filter(
+            (p: any) => p.tagName === "ins" && p.HTMLSnippet.includes("adsbygoogle")
+        );
 
-       expect(insPackets.length).toBeGreaterThanOrEqual(1);
+        expect(insPackets.length).toBeGreaterThanOrEqual(1);
 
-       for (const pkt of insPackets) {
-           expect(pkt.attributes["data-ad-slot"]).toBeDefined();
-       }
-   });
+        for (const pkt of insPackets) {
+            expect(pkt.attributes["data-ad-slot"]).toBeDefined();
+        }
+    });
 
-   test("ad container packets include data-ad-client in attributes", async ({ page }) => {
-       const res = await runFullPipeline(page);
+    test("ad container packets include data-ad-client in attributes", async ({ page }) => {
+        const res = await runFullPipeline(page);
 
-       const insPackets = res.packets.filter(
-           (p: any) => p.tagName === "ins" && p.HTMLSnippet.includes("adsbygoogle")
-       );
+        const insPackets = res.packets.filter(
+            (p: any) => p.tagName === "ins" && p.HTMLSnippet.includes("adsbygoogle")
+        );
 
-       const hasClient = insPackets.some(
-           (p: any) => p.attributes["data-ad-client"] !== undefined
-       );
+        const hasClient = insPackets.some(
+            (p: any) => p.attributes["data-ad-client"] !== undefined
+        );
 
-       expect(hasClient).toBe(true);
-   });
+        expect(hasClient).toBe(true);
+    });
 });
