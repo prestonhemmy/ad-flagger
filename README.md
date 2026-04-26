@@ -1,83 +1,130 @@
-# Suspicious UI Detector
+# Deceptive Ad Flagger
 
-A Chrome extension that detects suspicious UI elements on web pages.
+A Chrome extension that flags disguised ads and deceptive UI patterns on the pages you browse, using an in-browser small language model.
 
+[![Demo](demo/fake-download.gif)](demo/fake-download.gif)
+
+Discovers candidate interactive and ad-container elements in the DOM, builds a token-efficient evidence packet for each one, and classifies them locally with WebLLM. Suspicious elements get a visual badge and outline so you can see what the extension flagged before you click. All inference runs on-device — no backend, no API keys, no data leaves the browser.
+
+## Tech Stack
+
+* **TypeScript** — content script, background service worker, popup
+* **React + Tailwind CSS** — popup UI
+* **Vite** — bundling and dev server
+* **WebLLM** — in-browser small language model inference (WebGPU + WebAssembly)
+* **Chrome Extensions API (Manifest V3)** — content scripts, service worker, message passing
+* **Vitest + Playwright** — unit and integration testing
+## Quick Start
+
+### Prerequisites
+
+* Node.js 20+
+* Chromium-based browser with WebGPU enabled
+### Build
+
+```
+git clone https://github.com/prestonhemmy/ad-flagger.git
+cd ad-flagger
+npm install
+npm run build
+```
+
+### Load the extension
+
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked** and select the `dist/` directory
+### Develop
+
+```
+npm run dev    # watch-mode build
+```
 
 ## Architecture
 
-- **Chrome Extension** (Manifest V3) built with React, Tailwind, Vite, TypeScript
-- **Content script** (`src/content/`): Reads page DOM/HTML, sends to LLM, highlights suspicious elements with explanations
-- **Background service worker** (`src/background/`): Extension lifecycle, coordinates messaging between popup and content script
-- **Popup** (`src/popup/`): Extension UI for settings (toggle detection, manage trusted URLs, etc.)
-- **WebLLM**: In-browser LLM inference engine using WebGPU + WebAssembly. Target model size is 2-3B parameters. Runs in a Web Worker to avoid blocking the UI thread.
-- **No backend**: this is intentional so all LLM inference runs locally in the browser to eliminate privacy risks. This removes the need for a backend (since typical LLMs need to be called securely with an API key). A backend thus would also
-require user authentication which would add friction and require the user to trust our auth handling. A backend would also be significantly more maintenance and cost, requiring setting up cloud resources.
+```
++---------------------+    packets   +-------------------------+
+|   content script    |  ----------> |   background worker     |   classify  +---------+
+|   (per frame)       |              |  - per-tab queue        |  ---------> | WebLLM  |
+|  - DOM extraction   |  <---------- |  - hub-and-spoke router |  <--------- | (SLM)   |
+|  - visual overlay   |    overlay   |                         |   result    +---------+
++---------------------+              +------------+------------+
+                                                  ^
+                                                  | settings, status
+                                                  v
+                                           +-------------+
+                                           |    popup    |
+                                           +-------------+
+```
 
+The extension runs three logical components:
 
-## Development
+1. **Content script** (`src/content/`) — runs in each frame. Discovers candidate elements (interactive controls + known 
+   ad containers), filters by visibility and meaningful content, builds an evidence packet per candidate, and ships them
+   to the background worker. Renders overlay highlights on classification results, with overflow-aware clipping and 
+   reposition on scroll/resize.
+2. **Background service worker** (`src/background/`) — central message router. Maintains per-tab packet queues with 
+   iframe priority, drives WebLLM classification, broadcasts pipeline status to the popup, and relays cross-frame 
+   highlight messages.
+3. **Popup** (`src/popup/`) — React UI for toggling detection, trusting the current site, picking a model, and viewing 
+   live status (loading / scanning / done). 
 
-- `npm run dev` — watch mode build
-- `npm run build` — production build to `dist/`
-- Load `dist/` as unpacked extension in `chrome://extensions`
+All inter-context messaging flows through the background worker (hub-and-spoke). The content script and popup never message each other directly, which eliminates a class of cross-frame race conditions that show up in star-topology Chrome extensions.
 
+## How It Works
 
-## Planned features
+1. **Discovery** — `selectors.ts` queries interactive elements (`a[href]`, `button`, `iframe`, `[role='button']`, etc.) and known ad-container patterns (`adsbygoogle`, `div-gpt-ad`, ezoic, etc.).
+2. **Filtering** — drop hidden, tiny, navigation, and content-less elements.
+3. **Capping** — at most ~50 candidates per page; ad slots get up to ~30% of the budget before the rest fills with interactive elements.
+4. **Evidence packet** — for each candidate, capture a truncated HTML snippet, a curated subset of attributes, computed style for the element and its ancestor chain, position and viewport coverage, and a small window of surrounding text. Sized to fit the SLM context window.
+5. **Classification** — packets ship to the background worker, which queues them per-tab (iframes first), prepends each one with a structured prompt (page hostname, same-origin signal, ad-container flag, surrounding text), and feeds them to WebLLM.
+6. **Highlighting** — suspicious elements get a red outline and a dismissible badge. Cross-frame flags are relayed to the top-level frame so iframes get badged on the parent page. Overlays clip to the element's visible rect and reposition on scroll/resize.
+   A `MutationObserver` watches known ad containers for late-injected SafeFrame iframes and re-runs the pipeline on new candidates.
 
-- Read page HTML and identify suspicious UI elements via LLM
-- Highlight suspicious elements with AI-generated explanation of why
-- Dismiss button for false positives
-- Toggle detection on/off
-- URL allowlist for trusted sites
+## Results
 
+Live classification on APK Mirror:
+
+[![APK Mirror demo](demo/apkmirror.gif)](demo/apkmirror.gif)
+
+Debug mode showing benign element classification (queued → processing → safe):
+
+[![Debug mode demo](demo/debug-mode.gif)](demo/debug-mode.gif)
+
+> Validation against representative file-hosting sites (APK Mirror, MediaFire) and 8 HTML fixtures was performed during development. Re-validation against the latest prompt and pipeline changes is pending.
 
 ## Testing
 
-### Unit Tests
+### Unit (Vitest)
 
-```bash
-# Run all unit tests
-npm run test    # or `npm run test:unit`
-
-# Run unit tests for a specific test module (background/, content/, popup/)
-npm run test -- tests/<module>
+```
+npm run test                       # all unit tests
+npm run test -- tests/<module>     # single module
 ```
 
-### Integration Tests
+### Integration (Playwright)
 
-```bash
-# First build the test bundle (only need be run once)
-npm run test:build-bundle
-
-# Run all integration tests and view Playwright report
+```
+npm run test:build-bundle                                # one-time bundle build
 npm run test:integration && npm run playwright:report
-
-# Run integration tests for a specific file (selectors.integration.test.ts, extractor.integration.test.ts)
-npm run test:integration -- tests/integration/<test_file>
+npm run test:integration -- tests/integration/<file>     # single file
 ```
 
-```bash
-# Run all unit and integration tests
+### Both
+
+```
 npm run test:all
 ```
 
+## Acknowledgements
 
-## Releasing
+Originally co-developed with [Melvin Chen](https://github.com/mchen610) as a senior project at the University of 
+Florida, advised by Dr. Ye Xia.
 
-Pushing a version tag triggers a GitHub Actions workflow that builds the extension and publishes it as a `.zip` on GitHub Releases.
+## Author
 
-```bash
-git tag v0.0.1
-git push origin v0.0.1
-```
+**Preston Hemmy**
 
+GitHub: [@prestonhemmy](https://github.com/prestonhemmy)
 
----
-<p align="center">
-  <b>Melvin Chen</b> 
-  <a href="https://github.com/mchen610"><img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white" alt="GitHub" valign="middle"></a>
-  <a href="https://linkedin.com/in/melvin-chen"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn" valign="middle"></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <b>Preston Hemmy</b> 
-  <a href="https://github.com/prestonhemmy"><img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white" alt="GitHub" valign="middle"></a>
-  <a href="https://linkedin.com/in/prestonhemmy"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn" valign="middle"></a>
-</p>
+LinkedIn: [Preston Hemmy](https://linkedin.com/in/prestonhemmy)
