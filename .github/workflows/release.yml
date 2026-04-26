@@ -24,10 +24,10 @@ jobs:
       - run: npm run build
 
       - name: Zip extension
-        run: cd dist && zip -r "../suspicious-ui-detector-${GITHUB_REF_NAME}.zip" .
+        run: cd dist && zip -r "../ad-flagger-${GITHUB_REF_NAME}.zip" .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: suspicious-ui-detector-*.zip
+          files: ad-flagger-*.zip
           generate_release_notes: true

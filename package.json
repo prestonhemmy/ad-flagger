@@ -1,5 +1,5 @@
 {
-  "name": "suspicious-ui-detector",
+  "name": "ad-flagger",
   "private": true,
   "version": "0.0.0",
   "type": "module",
