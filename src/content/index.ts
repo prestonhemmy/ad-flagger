@@ -64,6 +64,7 @@ let containerSelectorMap = new Map<number, string>();
 
 const overlayMap = new Map<number, { el: HTMLElement; overlay: HTMLDivElement }>();
 let flaggedElements = new Set<HTMLElement>();
+const flaggedSubframeUrls = new Set<string>();
 const debugOverlayIds = new Set<number>();
 
 /** Injects the overlay/badge stylesheet once into the document head. */
@@ -169,42 +170,14 @@ function removeOverlay(id: number) {
  * gains size or 10 seconds elapses.
  */
 function highlightElement(id: number, el: HTMLElement, explanation?: string) {
-    // TEMP (DEBUGGING)
-    console.log("[ad-flagger] highlight: enter", {
-        id,
-        tagName: el.tagName,
-        connected: el.isConnected,
-    });
-
-    if (flaggedElements.has(el)) {
-        // TEMP (DEBUGGING)
-        console.log("[ad-flagger] highlight: drop — element already flagged", {
-            id,
-            tagName: el.tagName,
-        });
-
-        return;
-    }
+    if (flaggedElements.has(el)) return;
 
     // containment deduplication
     for (const flagged of flaggedElements) {
-        if (flagged.contains(el)) {
-            // TEMP (DEBUGGING)
-            console.log("[ad-flagger] highlight: drop — ancestor already flagged", {
+        if (flagged.contains(el) || el.contains(flagged)) {
+            console.log("[ad-flagger] highlight: drop — ancestor/descendant already flagged", {
                 id,
                 tagName: el.tagName,
-                ancestorTag: flagged.tagName,
-            });
-
-            return;
-        }
-
-        if (el.contains(flagged)) {
-            // TEMP (DEBUGGING)
-            console.log("[ad-flagger] highlight: drop — descendant already flagged", {
-                id,
-                tagName: el.tagName,
-                descendantTag: flagged.tagName,
             });
 
             return;
@@ -215,7 +188,6 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
     if (rect.width === 0 && rect.height === 0) {
         // if already detached then defer to handleClassification
         if (!el.isConnected) {
-            // TEMP (DEBUGGING)
             console.log("[ad-flagger] highlight: drop — zero-rect and detached", {
                 id,
                 tagName: el.tagName,
@@ -224,27 +196,13 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
             return;
         }
 
-        // TEMP (DEBUGGING)
-        console.log("[ad-flagger] highlight: defer — zero-rect attached, awaiting resize", {
-            id,
-            tagName: el.tagName,
-        });
-
-        let resolved = false;
-
         // if element exists but zero-dim then retry when it has dimensions
+        let resolved = false;
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (entry.contentRect.width > 0 || entry.contentRect.height > 0) {
-                    resolved = true;    // TEMP (DEBUGGING)
+                    resolved = true;
                     observer.disconnect();
-
-                    // TEMP (DEBUGGING)
-                    console.log("[ad-flagger] highlight: resize fired, retrying", {
-                        id,
-                        width: entry.contentRect.width,
-                        height: entry.contentRect.height,
-                    });
 
                     highlightElement(id, el, explanation);
                     return;
@@ -258,8 +216,7 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
             if (resolved) return;
             observer.disconnect();
 
-            // TEMP (DEBUGGING)
-            console.log("[ad-flagger] highlight: drop — resize timeout (10s, never gained size)", {
+            console.log("[ad-flagger] highlight: drop — resize timeout", {
                 id,
                 tagName: el.tagName,
                 connected: el.isConnected,
@@ -409,17 +366,9 @@ function handleClassifications(classifications: ClassificationResult[]): void {
 
             // if inside iframe defer visual highlighting to parent
             if (window !== window.top) {
-                // TEMP (DEBUGGING)
-                console.log("[ad-flagger] subframe dispatching iframeFlag", {
-                    packetId: result.id,
-                    subframeHostname: window.location.hostname,
-                    referrerHostname: safeHostname(document.referrer),
-                });
-
                 chrome.runtime.sendMessage(
                     {
                         type: "iframeFlag",
-                        packetId: result.id,    // TEMP (DEBUGGING)
                         explanation: result.explanation,
                         pageHostname: safeHostname(document.referrer) ?? "",
                     },
@@ -645,32 +594,24 @@ if ((window as any).__suspiciousUiDetectorRan) {
 
                 const sourceHost = safeHostname(message.sourceURL)
                 if (!sourceHost) {
-                    // TEMP (DEBUGGING)
-                    console.log("[ad-flagger] relay: no sourceHost, dropping", { sourceURL: message.sourceURL });
+                    return;
+                }
+
+                if (message.sourceURL && flaggedElements.has(message.sourceURL)) {
                     return;
                 }
 
                 const iframes = Array.from(document.querySelectorAll("iframe"));
                 const iframeHosts = iframes.map((f) => safeHostname(f.src));
 
-                // TEMP (DEBUGGING)
-                console.log("[ad-flagger] relay: incoming", {
-                    sourceHost,
-                    sourceIsAdNetwork: isAdNetworkHost(sourceHost),
-                    iframeCount: iframes.length,
-                    iframeHosts,
-                });
-
                 // exact hostname match
                 let target: HTMLIFrameElement | null = null;
                 let targetIndex = -1;
-                let matchedTier: "exact" | "family" | null = null;  // TEMP (DEBUGGING)
                 for (let i = 0; i < iframes.length; i++) {
                     if (iframeHosts[i] && iframeHosts[i] === sourceHost) {
                         if (flaggedElements.has(iframes[i])) continue;
                         target = iframes[i];
                         targetIndex = i;
-                        matchedTier = "exact";  // TEMP (DEBUGGING)
                         break;
                     }
                 }
@@ -684,7 +625,6 @@ if ((window as any).__suspiciousUiDetectorRan) {
                         if (flaggedElements.has(iframe)) continue;
                         target = iframe;
                         targetIndex = i;
-                        matchedTier = "family"; // TEMP (DEBUGGING)
                         break;
                     }
                 }
@@ -692,26 +632,9 @@ if ((window as any).__suspiciousUiDetectorRan) {
                 if (target && targetIndex >= 0) {
                     const id = 10000 + targetIndex;
 
-                    // TEMP (DEBUGGING)
-                    console.log(`[ad-flagger] relay: matched (${matchedTier})`, {
-                        sourceHost,
-                        targetHost: iframeHosts[targetIndex],
-                        iframeIndex: targetIndex,
-                        assignedId: id,
-                    });
+                    if (message.sourceURL) flaggedSubframeUrls.add(message.sourceURL);
 
                     highlightElement(id, target, message.explanation);
-                } else {
-                    // TEMP (DEBUGGING)
-                    console.log("[ad-flagger] relay: no match — fell through", {
-                        sourceHost,
-                        sourceIsAdNetwork: isAdNetworkHost(sourceHost),
-                        iframeHosts,
-                        iframeAdNetworkFlags: iframeHosts.map(isAdNetworkHost),
-                        alreadyFlaggedIndices: iframes
-                            .map((f, i) => (flaggedElements.has(f) ? i : -1))
-                            .filter((i) => i >= 0),
-                    });
                 }
             }
         });

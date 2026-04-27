@@ -144,7 +144,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 					tabId,
 					{
 						type: "iframeFlagRelay",
-						sourcePacketId: message.packetId,	// TEMP (DEBUGGING)
 						explanation: message.explanation,
 						sourceURL: sender.url,
 					},
