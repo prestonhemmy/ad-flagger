@@ -47,6 +47,8 @@ const AD_NETWORK_SUFFIXES = [
     // add other common ad networks as needed
 ];
 
+const SLOT_ID_BASE = 10000;
+
 // frame-specific ID offset (top-level = 0, subframes > 0)
 let idOffset = 0;
 
@@ -141,7 +143,9 @@ function positionOverlay(el: HTMLElement, overlay: HTMLDivElement) {
 function repositionAllOverlays() {
     for (const [id, entry] of overlayMap) {
         const wasConnected = entry.el.isConnected;
-        let recoveryAction: "none" | "recovered-via-container" | "removed-no-container" = "none";
+        let recoveryAction:
+            | "none" | "recovered-via-container" | "removed-no-container"
+            | "soft-hidden-slot" = "none";
 
         // if the element became detached, try to re-locate it
         if (!wasConnected) {
@@ -156,6 +160,15 @@ function repositionAllOverlays() {
                     ? container.getAttribute("src") : undefined;
 
                 recoveryAction = "recovered-via-container";
+            } else if (id >= SLOT_ID_BASE) {
+                // o.w. if iframe may be reoccupied, hide overlay and keep the entry
+                entry.overlay.style.display = "none";
+                console.log("[ad-flagger] reposition: soft-hidden slot", {
+                    id,
+                    reason: "slot-detached-awaiting-rebind",
+                });
+
+                continue;
             } else {
                 // o.w. container no longer exists then remove overlay entirely
                 console.log("[ad-flagger] reposition: removed", {id, reason: "no-live-container"});
@@ -223,6 +236,7 @@ function removeOverlay(id: number) {
     if (entry) {
         entry.overlay.remove();
         entry.el.classList.remove("ad-flagger-highlighted");
+        flaggedElements.delete(entry.el);
         overlayMap.delete(id);
     }
 }
@@ -235,6 +249,22 @@ function removeOverlay(id: number) {
  * gains size or 10 seconds elapses.
  */
 function highlightElement(id: number, el: HTMLElement, explanation?: string) {
+    const existing = overlayMap.get(id);
+    if (existing && existing.el !== el) {
+        flaggedElements.delete(existing.el);
+        flaggedElements.add(el);
+
+        existing.el.classList.remove("ad-flagger-highlighted");
+        el.classList.add("ad-flagger-highlighted");
+        existing.el = el;
+        existing.lastSrc = el.tagName.toLowerCase() === "iframe"
+            ? el.getAttribute("src") : undefined;
+
+        positionOverlay(el, existing.overlay);
+        console.log("[ad-flagger] highlight: rebound overlay", {id, tagName: el.tagName});
+        return;
+    }
+
     if (flaggedElements.has(el)) {
         console.log("[ad-flagger] highlight: drop — already flagged", {id, tagName: el.tagName, reason: "self"});
         return;
@@ -690,7 +720,7 @@ if ((window as any).__suspiciousUiDetectorRan) {
                 }
 
                 if (target && targetIndex >= 0) {
-                    const id = 10000 + targetIndex;
+                    const id = SLOT_ID_BASE + targetIndex;
 
                     if (message.sourceURL) flaggedSubframeUrls.add(message.sourceURL);
 
