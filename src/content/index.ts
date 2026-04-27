@@ -27,7 +27,25 @@ const SAFE_IFRAME_HOSTS = new Set([
     "platform.twitter.com",
     "www.instagram.com",
     // add other common embed providers as needed
-])
+]);
+
+const AD_NETWORK_SUFFIXES = [
+    "doubleclick.net",
+    "googlesyndication.com",
+    "googleadservices.com",
+    "googletagservices.com",
+    "googleads.g.doubleclick.net",
+    "safeframe.googlesyndication.com",
+    "adnxs.com",
+    "adsrvr.org",
+    "amazon-adsystem.com",
+    "criteo.com",
+    "taboola.com",
+    "outbrain.com",
+    "admaster.cc",
+    "ezoic.net",
+    // add other common ad networks as needed
+];
 
 // frame-specific ID offset (top-level = 0, subframes > 0)
 let idOffset = 0;
@@ -312,8 +330,19 @@ function handleClassifications(classifications: ClassificationResult[]): void {
 
             // if inside iframe defer visual highlighting to parent
             if (window !== window.top) {
+                // TEMP (DEBUGGING)
+                console.log("[ad-flagger] subframe dispatching iframeFlag", {
+                    packetId: result.id,
+                    subframeHostname: window.location.hostname,
+                    referrerHostname: safeHostname(document.referrer),
+                });
+
                 chrome.runtime.sendMessage(
-                    {type: "iframeFlag", explanation: result.explanation},
+                    {
+                        type: "iframeFlag",
+                        explanation: result.explanation,
+                        pageHostname: safeHostname(document.referrer) ?? "",
+                    },
                     () => void chrome.runtime.lastError
                 );
             } else {
@@ -535,16 +564,73 @@ if ((window as any).__suspiciousUiDetectorRan) {
                 if (window !== window.top) return
 
                 const sourceHost = safeHostname(message.sourceURL)
-                if (!sourceHost) return;
+                if (!sourceHost) {
+                    // TEMP (DEBUGGING)
+                    console.log("[ad-flagger] relay: no sourceHost, dropping", { sourceURL: message.sourceURL });
+                    return;
+                }
 
-                const iframes = document.querySelectorAll("iframe");
-                for (const iframe of iframes) {
-                    const iframeHost = safeHostname(iframe.src)
-                    if (iframeHost && iframeHost == sourceHost) {
-                        const id = 10000 + Array.from(iframes).indexOf(iframe);
-                        highlightElement(id, iframe, message.explanation);
+                const iframes = Array.from(document.querySelectorAll("iframe"));
+                const iframeHosts = iframes.map((f) => safeHostname(f.src));
+
+                // TEMP (DEBUGGING)
+                console.log("[ad-flagger] relay: incoming", {
+                    sourceHost,
+                    sourceIsAdNetwork: isAdNetworkHost(sourceHost),
+                    iframeCount: iframes.length,
+                    iframeHosts,
+                });
+
+                // exact hostname match
+                let target: HTMLIFrameElement | null = null;
+                let targetIndex = -1;
+                let matchedTier: "exact" | "family" | null = null;  // TEMP (DEBUGGING)
+                for (let i = 0; i < iframes.length; i++) {
+                    if (iframeHosts[i] && iframeHosts[i] === sourceHost) {
+                        target = iframes[i];
+                        targetIndex = i;
+                        matchedTier = "exact";  // TEMP (DEBUGGING)
                         break;
                     }
+                }
+
+                // ad-network family match (fallback approach)
+                if (!target && isAdNetworkHost(sourceHost)) {
+                    for (let i = 0; i < iframes.length; i++) {
+                        const iframe = iframes[i];
+                        const iframeHost = iframeHosts[i];
+                        if (!iframeHost || !isAdNetworkHost(iframeHost)) continue;
+                        if (flaggedElements.has(iframe)) continue;
+                        target = iframe;
+                        targetIndex = i;
+                        matchedTier = "family"; // TEMP (DEBUGGING)
+                        break;
+                    }
+                }
+
+                if (target && targetIndex >= 0) {
+                    const id = 10000 + targetIndex;
+
+                    // TEMP (DEBUGGING)
+                    console.log(`[ad-flagger] relay: matched (${matchedTier})`, {
+                        sourceHost,
+                        targetHost: iframeHosts[targetIndex],
+                        iframeIndex: targetIndex,
+                        assignedId: id,
+                    });
+
+                    highlightElement(id, target, message.explanation);
+                } else {
+                    // TEMP (DEBUGGING)
+                    console.log("[ad-flagger] relay: no match — fell through", {
+                        sourceHost,
+                        sourceIsAdNetwork: isAdNetworkHost(sourceHost),
+                        iframeHosts,
+                        iframeAdNetworkFlags: iframeHosts.map(isAdNetworkHost),
+                        alreadyFlaggedIndices: iframes
+                            .map((f, i) => (flaggedElements.has(f) ? i : -1))
+                            .filter((i) => i >= 0),
+                    });
                 }
             }
         });
@@ -569,11 +655,18 @@ if ((window as any).__suspiciousUiDetectorRan) {
             }
         );
     }
+}
 
-    /** Helper that extracts domain from url */
-    function safeHostname(url?: string): string | null {
-        if (!url) return null;
-        try { return new URL(url).hostname; }
-        catch { return null;}
-    }
+/** Helper that extracts domain from url */
+function safeHostname(url?: string): string | null {
+    if (!url) return null;
+    try { return new URL(url).hostname; }
+    catch { return null;}
+}
+
+/** Helper that checks if hostname in ad-network family */
+function isAdNetworkHost(host: string | null): boolean {
+    if (!host) return false;
+    const h = host.toLowerCase();
+    return AD_NETWORK_SUFFIXES.some((suffix) => h === suffix || h.endsWith("." + suffix));
 }

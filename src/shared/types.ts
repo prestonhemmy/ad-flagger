@@ -119,6 +119,7 @@ interface DetectionMessageType {
 interface IframeFlagMessageType {
     type: "iframeFlag";
     explanation?: string;
+    pageHostname: string;
 }
 
 interface SetModelMessageType {
