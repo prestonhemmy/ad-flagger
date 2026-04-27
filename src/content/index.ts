@@ -15,7 +15,7 @@
 
 import { ExtractionResult, ClassificationResult } from "../shared/types"
 import { discoverCandidates } from "./selectors";
-import { extractEvidence, buildElementMap } from "./extractor";
+import { extractEvidence, buildElementMap, filterExtractable } from "./extractor";
 import { DEFAULT_CONFIG } from "./config";
 import styles from "./highlight.css?inline";
 
@@ -415,8 +415,9 @@ function observeAdContainers() {
 
         // merge new elements into existing element map
         const startID = Math.max(...elementMap.keys(), -1) + 1;
+        const extractable = filterExtractable(newCandidates, DEFAULT_CONFIG);
         const newMap = new Map(
-            newCandidates.map((e, i) => [startID + i, e])
+            extractable.map((e, i) => [startID + i, e])
         );
 
         for (const [id, el] of newMap) {

@@ -13,11 +13,15 @@ import { EvidencePacket,
          AncestorStyleEntry
 } from "../shared/types";
 
+const AD_LABEL_PATTERN = /^(advertisement|advertisements|sponsored|ad|ads|promoted|sponsor|sponsors)$/i;
+
 export function extractEvidence(
     candidates: HTMLElement[],
     config: ExtractionConfig = DEFAULT_CONFIG,
 ): ExtractionResult {
-    const packets: EvidencePacket[] = candidates.map((elem, i) =>
+    const extractable = filterExtractable(candidates, config);
+
+    const packets: EvidencePacket[] = extractable.map((elem, i) =>
         buildPacket(elem, i, config)
     );
 
@@ -30,9 +34,37 @@ export function extractEvidence(
 }
 
 export function buildElementMap(candidates: HTMLElement[], offset: number = 0): Map<number, HTMLElement> {
-    return new Map(candidates.map(
+    const extractable = filterExtractable(candidates, DEFAULT_CONFIG);
+    return new Map(extractable.map(
         (elem, i) => [i + offset, elem])
     );
+}
+
+export function filterExtractable(
+    candidates: HTMLElement[],
+    config: ExtractionConfig = DEFAULT_CONFIG
+): HTMLElement[] {
+    return candidates.filter((elem) => isExtractable(elem, config));
+}
+
+function isExtractable(elem: HTMLElement, config: ExtractionConfig) {
+    if (elem.tagName.toLowerCase() !== "iframe") return true;
+
+    // consider iframes with real src
+    const src = elem.getAttribute("src");
+    if (src && src.trim().length > 0
+        && !src.startsWith("about:")
+        && !src.startsWith("javascript:")) {
+        return true;
+    }
+
+    // o.w. empty iframe -> only consider if surroundings contain something
+    // the SLM can reason over
+    const surrounding = extractSurroundingText(elem, config);
+    return surrounding.some((txt) => {
+        const trimmed = txt.trim();
+        return trimmed.length > 0 && !AD_LABEL_PATTERN.test(trimmed);
+    });
 }
 
 function buildPacket(
