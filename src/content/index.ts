@@ -169,25 +169,83 @@ function removeOverlay(id: number) {
  * gains size or 10 seconds elapses.
  */
 function highlightElement(id: number, el: HTMLElement, explanation?: string) {
-    if (flaggedElements.has(el)) return;
+    // TEMP (DEBUGGING)
+    console.log("[ad-flagger] highlight: enter", {
+        id,
+        tagName: el.tagName,
+        connected: el.isConnected,
+    });
+
+    if (flaggedElements.has(el)) {
+        // TEMP (DEBUGGING)
+        console.log("[ad-flagger] highlight: drop — element already flagged", {
+            id,
+            tagName: el.tagName,
+        });
+
+        return;
+    }
 
     // containment deduplication
     for (const flagged of flaggedElements) {
-        if (flagged.contains(el) || el.contains(flagged)) return
+        if (flagged.contains(el)) {
+            // TEMP (DEBUGGING)
+            console.log("[ad-flagger] highlight: drop — ancestor already flagged", {
+                id,
+                tagName: el.tagName,
+                ancestorTag: flagged.tagName,
+            });
+
+            return;
+        }
+
+        if (el.contains(flagged)) {
+            // TEMP (DEBUGGING)
+            console.log("[ad-flagger] highlight: drop — descendant already flagged", {
+                id,
+                tagName: el.tagName,
+                descendantTag: flagged.tagName,
+            });
+
+            return;
+        }
     }
 
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) {
         // if already detached then defer to handleClassification
         if (!el.isConnected) {
+            // TEMP (DEBUGGING)
+            console.log("[ad-flagger] highlight: drop — zero-rect and detached", {
+                id,
+                tagName: el.tagName,
+            });
+
             return;
         }
+
+        // TEMP (DEBUGGING)
+        console.log("[ad-flagger] highlight: defer — zero-rect attached, awaiting resize", {
+            id,
+            tagName: el.tagName,
+        });
+
+        let resolved = false;
 
         // if element exists but zero-dim then retry when it has dimensions
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (entry.contentRect.width > 0 || entry.contentRect.height > 0) {
+                    resolved = true;    // TEMP (DEBUGGING)
                     observer.disconnect();
+
+                    // TEMP (DEBUGGING)
+                    console.log("[ad-flagger] highlight: resize fired, retrying", {
+                        id,
+                        width: entry.contentRect.width,
+                        height: entry.contentRect.height,
+                    });
+
                     highlightElement(id, el, explanation);
                     return;
                 }
@@ -196,7 +254,17 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
 
         observer.observe(el);
 
-        setTimeout(() => observer.disconnect(), 10000); // stop retrying after 10s
+        setTimeout(() => {
+            if (resolved) return;
+            observer.disconnect();
+
+            // TEMP (DEBUGGING)
+            console.log("[ad-flagger] highlight: drop — resize timeout (10s, never gained size)", {
+                id,
+                tagName: el.tagName,
+                connected: el.isConnected,
+            });
+        }, 10000); // stop retrying after 10s
         return;
     }
 
@@ -226,6 +294,17 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
     positionOverlay(el, overlay);
     document.body.appendChild(overlay);
     overlayMap.set(id, { el, overlay });
+
+    console.log("[ad-flagger] highlight: drew overlay", {
+        id,
+        tagName: el.tagName,
+        rect: {
+            top: Math.round(rect.top),
+            left: Math.round(rect.left),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+        },
+    });
 }
 
 /**
@@ -340,6 +419,7 @@ function handleClassifications(classifications: ClassificationResult[]): void {
                 chrome.runtime.sendMessage(
                     {
                         type: "iframeFlag",
+                        packetId: result.id,    // TEMP (DEBUGGING)
                         explanation: result.explanation,
                         pageHostname: safeHostname(document.referrer) ?? "",
                     },
@@ -587,6 +667,7 @@ if ((window as any).__suspiciousUiDetectorRan) {
                 let matchedTier: "exact" | "family" | null = null;  // TEMP (DEBUGGING)
                 for (let i = 0; i < iframes.length; i++) {
                     if (iframeHosts[i] && iframeHosts[i] === sourceHost) {
+                        if (flaggedElements.has(iframes[i])) continue;
                         target = iframes[i];
                         targetIndex = i;
                         matchedTier = "exact";  // TEMP (DEBUGGING)

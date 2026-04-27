@@ -118,6 +118,7 @@ interface DetectionMessageType {
 
 interface IframeFlagMessageType {
     type: "iframeFlag";
+    packetId: number;   // TEMP (DEBUGGING)
     explanation?: string;
     pageHostname: string;
 }
