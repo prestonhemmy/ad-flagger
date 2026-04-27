@@ -62,7 +62,13 @@ let containerSelectorMap = new Map<number, string>();
 
 /** === Visual Highlight Overlay Logic ==== */
 
-const overlayMap = new Map<number, { el: HTMLElement; overlay: HTMLDivElement }>();
+interface OverlayEntry {
+    el: HTMLElement;
+    overlay: HTMLDivElement;
+    lastSrc?: string | null;    // for reposition rotation detection (iframe only)
+}
+
+const overlayMap = new Map<number, OverlayEntry>();
 let flaggedElements = new Set<HTMLElement>();
 const flaggedSubframeUrls = new Set<string>();
 const debugOverlayIds = new Set<number>();
@@ -134,21 +140,80 @@ function positionOverlay(el: HTMLElement, overlay: HTMLDivElement) {
  */
 function repositionAllOverlays() {
     for (const [id, entry] of overlayMap) {
+        const wasConnected = entry.el.isConnected;
+        let recoveryAction: "none" | "recovered-via-container" | "removed-no-container" = "none";
+
         // if the element became detached, try to re-locate it
-        if (!entry.el.isConnected) {
+        if (!wasConnected) {
             const container = findLiveAdContainer(id);
             if (container) {
                 entry.el.classList.remove("ad-flagger-highlighted");
                 container.classList.add("ad-flagger-highlighted");
                 entry.el = container;
+
+                // reset src baseline if the recovered element is itself an iframe
+                entry.lastSrc = container.tagName.toLowerCase() === "iframe"
+                    ? container.getAttribute("src") : undefined;
+
+                recoveryAction = "recovered-via-container";
             } else {
                 // o.w. container no longer exists then remove overlay entirely
+                console.log("[ad-flagger] reposition: removed", {id, reason: "no-live-container"});
+
                 removeOverlay(id);
                 continue;
             }
         }
 
+        // capture state before positioning
+        const isIframe = entry.el.tagName.toLowerCase() === "iframe";
+        const currentSrc = isIframe ? entry.el.getAttribute("src") : null;
+        const srcChanged = isIframe && entry.lastSrc !== undefined && currentSrc !== entry.lastSrc;
+
+        const prevDisplay = entry.overlay.style.display;
+        const rawRect = entry.el.getBoundingClientRect();
+        const visibleRect = getVisibleRect(entry.el);
+
         positionOverlay(entry.el, entry.overlay);
+
+        const nextDisplay = entry.overlay.style.display;
+        const visibilityFlipped = prevDisplay !== nextDisplay;
+
+        // log only on state transitions to keep volume manageable during scroll
+        if (visibilityFlipped || srcChanged || recoveryAction !== "none") {
+            const payload: Record<string, unknown> = {
+                id,
+                wasConnected,
+                recoveryAction,
+                rawRect: {
+                    top: Math.round(rawRect.top),
+                    left: Math.round(rawRect.left),
+                    width: Math.round(rawRect.width),
+                    height: Math.round(rawRect.height),
+                },
+                visibleRect: {
+                    top: Math.round(visibleRect.top),
+                    left: Math.round(visibleRect.left),
+                    width: Math.round(visibleRect.width),
+                    height: Math.round(visibleRect.height),
+                },
+                prevDisplay: prevDisplay || "(empty)",
+                nextDisplay: nextDisplay || "(empty)",
+                overlayTop: entry.overlay.style.top,
+                overlayLeft: entry.overlay.style.left,
+            };
+
+            if (isIframe) {
+                payload.srcChanged = srcChanged;
+                payload.currentSrc = currentSrc;
+                if (srcChanged) payload.previousSrc = entry.lastSrc;
+            }
+
+            console.log("[ad-flagger] reposition:", payload);
+        }
+
+        // update baselines for next iteration
+        if (isIframe) entry.lastSrc = currentSrc;
     }
 }
 
@@ -170,29 +235,31 @@ function removeOverlay(id: number) {
  * gains size or 10 seconds elapses.
  */
 function highlightElement(id: number, el: HTMLElement, explanation?: string) {
-    if (flaggedElements.has(el)) return;
+    if (flaggedElements.has(el)) {
+        console.log("[ad-flagger] highlight: drop — already flagged", {id, tagName: el.tagName, reason: "self"});
+        return;
+    }
 
     // containment deduplication
     for (const flagged of flaggedElements) {
-        if (flagged.contains(el) || el.contains(flagged)) {
-            console.log("[ad-flagger] highlight: drop — ancestor/descendant already flagged", {
-                id,
-                tagName: el.tagName,
+        if (flagged.contains(el)) {
+            console.log("[ad-flagger] highlight: drop — already flagged", {
+                id, tagName: el.tagName, reason: "ancestor", relatedTag: flagged.tagName,
             });
-
+            return;
+        }
+        if (el.contains(flagged)) {
+            console.log("[ad-flagger] highlight: drop — already flagged", {
+                id, tagName: el.tagName, reason: "descendant", relatedTag: flagged.tagName,
+            });
             return;
         }
     }
 
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) {
-        // if already detached then defer to handleClassification
         if (!el.isConnected) {
-            console.log("[ad-flagger] highlight: drop — zero-rect and detached", {
-                id,
-                tagName: el.tagName,
-            });
-
+            console.log("[ad-flagger] highlight: drop — zero-rect and detached", {id, tagName: el.tagName});
             return;
         }
 
@@ -203,23 +270,18 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
                 if (entry.contentRect.width > 0 || entry.contentRect.height > 0) {
                     resolved = true;
                     observer.disconnect();
-
                     highlightElement(id, el, explanation);
                     return;
                 }
             }
         });
-
         observer.observe(el);
 
         setTimeout(() => {
             if (resolved) return;
             observer.disconnect();
-
             console.log("[ad-flagger] highlight: drop — resize timeout", {
-                id,
-                tagName: el.tagName,
-                connected: el.isConnected,
+                id, tagName: el.tagName, connected: el.isConnected,
             });
         }, 10000); // stop retrying after 10s
         return;
@@ -239,18 +301,16 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
 
     const closeBtn = badge.querySelector(".ad-flagger-badge-x")!;
     const textNode = badge.childNodes[1] as Text;
-    badge.addEventListener("mouseenter", () => {
-        textNode.textContent = label + " ";
-    });
-    badge.addEventListener("mouseleave", () => {
-        textNode.textContent = "Suspicious ";
-    });
+    badge.addEventListener("mouseenter", () => { textNode.textContent = label + " "; });
+    badge.addEventListener("mouseleave", () => { textNode.textContent = "Suspicious "; });
     closeBtn.addEventListener("click", () => removeOverlay(id));
 
     overlay.appendChild(badge);
     positionOverlay(el, overlay);
     document.body.appendChild(overlay);
-    overlayMap.set(id, { el, overlay });
+
+    const isIframe = el.tagName.toLowerCase() === "iframe";
+    overlayMap.set(id, {el, overlay, lastSrc: isIframe ? el.getAttribute("src") : undefined});
 
     console.log("[ad-flagger] highlight: drew overlay", {
         id,
@@ -597,7 +657,7 @@ if ((window as any).__suspiciousUiDetectorRan) {
                     return;
                 }
 
-                if (message.sourceURL && flaggedElements.has(message.sourceURL)) {
+                if (message.sourceURL && flaggedSubframeUrls.has(message.sourceURL)) {
                     return;
                 }
 
