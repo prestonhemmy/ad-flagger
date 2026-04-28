@@ -6,19 +6,19 @@ Reference for the test fixtures shipped with the integration suite and the real-
 
 Located at `tests/integration/fixtures/`. Loaded by the Playwright suite via the integration server.
 
-| Fixture | Purpose |
-|---|---|
-| `adsbygoogle-nested.html` | Nested `ins.adsbygoogle` slots; verifies sibling-label capture across wrapper boundaries. |
-| `benign-stress-test.html` | Dense page with no deceptive elements; FP regression check. |
-| `deeply-nested-ad.html` | 12+ levels of nesting; exercises the style ancestry walk. |
-| `fake-download-page.html` | Disguised "Download" button next to the legitimate one; canonical TP case. |
-| `hidden-elements.html` | Display-none / visibility-hidden / zero-size elements; filtering check. |
-| `high-element-count.html` | Volume stress test for the candidate cap. |
-| `iframe-ad.html` | Top-level iframe ad; cross-frame relay path. |
-| `random-25-examples.html` | Mixed sample for general spot-checking. |
-| `sticky-banner-ad.html` | Fixed-position banner; viewport coverage and position extraction. |
-| `suspicious-stress-test.html` | Density of deceptive patterns; recall under load. |
-| `wrapper-isolated-ad.html` | Ad link isolated by a wrapper; sibling-text walk through the wrapper. |
+| Fixture                       | Purpose                                                                                   |
+|-------------------------------|-------------------------------------------------------------------------------------------|
+| `adsbygoogle-nested.html`     | Nested `ins.adsbygoogle` slots; verifies sibling-label capture across wrapper boundaries. |
+| `benign-stress-test.html`     | Dense page with no deceptive elements; FP regression check.                               |
+| `deeply-nested-ad.html`       | 12+ levels of nesting; exercises the style ancestry walk.                                 |
+| `fake-download-page.html`     | Disguised "Download" button next to the legitimate one; canonical TP case.                |
+| `hidden-elements.html`        | Display-none / visibility-hidden / zero-size elements; filtering check.                   |
+| `high-element-count.html`     | Volume stress test for the candidate cap.                                                 |
+| `iframe-ad.html`              | Top-level iframe ad; cross-frame relay path.                                              |
+| `random-25-examples.html`     | Mixed sample for general spot-checking.                                                   |
+| `sticky-banner-ad.html`       | Fixed-position banner; viewport coverage and position extraction.                         |
+| `suspicious-stress-test.html` | Density of deceptive patterns; recall under load.                                         |
+| `wrapper-isolated-ad.html`    | Ad link isolated by a wrapper; sibling-text walk through the wrapper.                     |
 
 ## Real-site spot-checks
 
@@ -58,10 +58,7 @@ as safe or is never classified to begin with.
 | greeksymbols.net           | Qwen3-4B | 4/28/26 | 3  | 2  | 0  | 0.6       | 1.0       | Greek alphabet reference; AdSense          |
 | i2symbol.com               | Qwen3-4B | 4/28/26 | 1  | 4  | 0  | 0.2 [^2]  | 1.0       | Unicode symbol/emoji copy & paste tool     |
 
-
 **Aggregate results:** Macro precision $\approx 0.65 ~~$ Macro recall $\approx$ 0.75
-
----
 
 [^1]: MediaFire's recall reflects the SafeFrame iframe rotation pattern, where the same outer container cycles
 through multiple ad creatives faster than overlays can rebind without scroll activity.
