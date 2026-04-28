@@ -704,11 +704,38 @@ if ((window as any).__suspiciousUiDetectorRan) {
 
                 const sourceHost = safeHostname(message.sourceURL);
                 if (!sourceHost) return;
+
                 if (message.sourceURL && flaggedSubframeUrls.has(message.sourceURL)) {
-                    console.log("[ad-flagger] relay: drop — sourceURL in flaggedSubframeUrls", {
+                    // find the overlay entry that currently claims this sourceURL
+                    let priorEntry: OverlayEntry | undefined;
+                    let priorId: number | undefined;
+                    for (const [id, entry] of overlayMap) {
+                        if (entry.sourceURL === message.sourceURL) {
+                            priorEntry = entry;
+                            priorId = id;
+                            break;
+                        }
+                    }
+
+                    // if the prior claim is still bound to a connected element, then dedup
+                    if (priorEntry && priorEntry.el.isConnected) {
+                        console.log("[ad-flagger] relay: drop — sourceURL in flaggedSubframeUrls", {
+                            sourceURL: message.sourceURL,
+                            priorId,
+                        });
+                        return;
+                    }
+
+                    // o.w. prior claim is stale (entry detached, or orphaned), then release
+                    // and fall through to iframe-lookup / rebind
+                    flaggedSubframeUrls.delete(message.sourceURL);
+                    if (priorEntry) priorEntry.sourceURL = undefined;
+
+                    console.log("[ad-flagger] relay: stale claim released — proceeding to rebind", {
                         sourceURL: message.sourceURL,
+                        priorId: priorId ?? null,
+                        priorEntryFound: priorEntry !== undefined,
                     });
-                    return;
                 }
 
                 const iframes = Array.from(document.querySelectorAll("iframe"));
