@@ -15,7 +15,7 @@
 
 import { ExtractionResult, ClassificationResult } from "../shared/types"
 import { discoverCandidates } from "./selectors";
-import { extractEvidence, buildElementMap } from "./extractor";
+import { extractEvidence, buildElementMap, filterExtractable } from "./extractor";
 import { DEFAULT_CONFIG } from "./config";
 import styles from "./highlight.css?inline";
 
@@ -27,7 +27,27 @@ const SAFE_IFRAME_HOSTS = new Set([
     "platform.twitter.com",
     "www.instagram.com",
     // add other common embed providers as needed
-])
+]);
+
+const AD_NETWORK_SUFFIXES = [
+    "doubleclick.net",
+    "googlesyndication.com",
+    "googleadservices.com",
+    "googletagservices.com",
+    "googleads.g.doubleclick.net",
+    "safeframe.googlesyndication.com",
+    "adnxs.com",
+    "adsrvr.org",
+    "amazon-adsystem.com",
+    "criteo.com",
+    "taboola.com",
+    "outbrain.com",
+    "admaster.cc",
+    "ezoic.net",
+    // add other common ad networks as needed
+];
+
+const SLOT_ID_BASE = 10000;
 
 // frame-specific ID offset (top-level = 0, subframes > 0)
 let idOffset = 0;
@@ -44,8 +64,16 @@ let containerSelectorMap = new Map<number, string>();
 
 /** === Visual Highlight Overlay Logic ==== */
 
-const overlayMap = new Map<number, { el: HTMLElement; overlay: HTMLDivElement }>();
+interface OverlayEntry {
+    el: HTMLElement;
+    overlay: HTMLDivElement;
+    lastSrc?: string | null;    // for reposition rotation detection (iframe only)
+    sourceURL?: string;         // subframe URL that produces this overlay (relay only)
+}
+
+const overlayMap = new Map<number, OverlayEntry>();
 let flaggedElements = new Set<HTMLElement>();
+const flaggedSubframeUrls = new Set<string>();
 const debugOverlayIds = new Set<number>();
 
 /** Injects the overlay/badge stylesheet once into the document head. */
@@ -115,21 +143,99 @@ function positionOverlay(el: HTMLElement, overlay: HTMLDivElement) {
  */
 function repositionAllOverlays() {
     for (const [id, entry] of overlayMap) {
+        const wasConnected = entry.el.isConnected;
+        let recoveryAction:
+            | "none" | "recovered-via-container" | "removed-no-container"
+            | "soft-hidden-slot" = "none";
+
         // if the element became detached, try to re-locate it
-        if (!entry.el.isConnected) {
+        if (!wasConnected) {
             const container = findLiveAdContainer(id);
             if (container) {
                 entry.el.classList.remove("ad-flagger-highlighted");
                 container.classList.add("ad-flagger-highlighted");
                 entry.el = container;
+
+                // reset src baseline if the recovered element is itself an iframe
+                entry.lastSrc = container.tagName.toLowerCase() === "iframe"
+                    ? container.getAttribute("src") : undefined;
+
+                recoveryAction = "recovered-via-container";
+            } else if (id >= SLOT_ID_BASE) {
+                // o.w. if iframe may be reoccupied, hide overlay and keep the entry
+                entry.overlay.style.display = "none";
+
+                // if relayed, release sourceURL for a later rebinding
+                if (entry.sourceURL) {
+                    flaggedSubframeUrls.delete(entry.sourceURL);
+                    entry.sourceURL = undefined;
+                }
+
+                console.log("[ad-flagger] reposition: soft-hidden slot", {
+                    id,
+                    reason: "slot-detached-awaiting-rebind",
+                    releasedSourceURL: entry.sourceURL ?? null,
+                });
+
+                continue;
             } else {
                 // o.w. container no longer exists then remove overlay entirely
+                console.log("[ad-flagger] reposition: removed", {id, reason: "no-live-container"});
+
                 removeOverlay(id);
                 continue;
             }
         }
 
+        // capture state before positioning
+        const isIframe = entry.el.tagName.toLowerCase() === "iframe";
+        const currentSrc = isIframe ? entry.el.getAttribute("src") : null;
+        const srcChanged = isIframe && entry.lastSrc !== undefined && currentSrc !== entry.lastSrc;
+
+        const prevDisplay = entry.overlay.style.display;
+        const rawRect = entry.el.getBoundingClientRect();
+        const visibleRect = getVisibleRect(entry.el);
+
         positionOverlay(entry.el, entry.overlay);
+
+        const nextDisplay = entry.overlay.style.display;
+        const visibilityFlipped = prevDisplay !== nextDisplay;
+
+        // log only on state transitions to keep volume manageable during scroll
+        if (visibilityFlipped || srcChanged || recoveryAction !== "none") {
+            const payload: Record<string, unknown> = {
+                id,
+                wasConnected,
+                recoveryAction,
+                rawRect: {
+                    top: Math.round(rawRect.top),
+                    left: Math.round(rawRect.left),
+                    width: Math.round(rawRect.width),
+                    height: Math.round(rawRect.height),
+                },
+                visibleRect: {
+                    top: Math.round(visibleRect.top),
+                    left: Math.round(visibleRect.left),
+                    width: Math.round(visibleRect.width),
+                    height: Math.round(visibleRect.height),
+                },
+                prevDisplay: prevDisplay || "(empty)",
+                nextDisplay: nextDisplay || "(empty)",
+                overlayTop: entry.overlay.style.top,
+                overlayLeft: entry.overlay.style.left,
+            };
+
+            if (isIframe) {
+                payload.srcChanged = srcChanged;
+                payload.currentSrc = currentSrc;
+                if (srcChanged) payload.previousSrc = entry.lastSrc;
+            }
+
+            console.log("[ad-flagger] reposition:", payload);
+        }
+
+        // update baselines for next iteration
+        if (isIframe) entry.lastSrc = currentSrc;
     }
 }
 
@@ -139,6 +245,8 @@ function removeOverlay(id: number) {
     if (entry) {
         entry.overlay.remove();
         entry.el.classList.remove("ad-flagger-highlighted");
+        flaggedElements.delete(entry.el);
+        if (entry.sourceURL) flaggedSubframeUrls.delete(entry.sourceURL);
         overlayMap.delete(id);
     }
 }
@@ -151,34 +259,71 @@ function removeOverlay(id: number) {
  * gains size or 10 seconds elapses.
  */
 function highlightElement(id: number, el: HTMLElement, explanation?: string) {
-    if (flaggedElements.has(el)) return;
+    const existing = overlayMap.get(id);
+    if (existing && existing.el !== el) {
+        flaggedElements.delete(existing.el);
+        flaggedElements.add(el);
+
+        existing.el.classList.remove("ad-flagger-highlighted");
+        el.classList.add("ad-flagger-highlighted");
+        existing.el = el;
+        existing.lastSrc = el.tagName.toLowerCase() === "iframe"
+            ? el.getAttribute("src") : undefined;
+
+        positionOverlay(el, existing.overlay);
+        console.log("[ad-flagger] highlight: rebound overlay", {id, tagName: el.tagName});
+        return;
+    }
+
+    if (flaggedElements.has(el)) {
+        console.log("[ad-flagger] highlight: drop — already flagged", {id, tagName: el.tagName, reason: "self"});
+        return;
+    }
 
     // containment deduplication
     for (const flagged of flaggedElements) {
-        if (flagged.contains(el) || el.contains(flagged)) return
+        if (flagged.contains(el)) {
+            console.log("[ad-flagger] highlight: drop — already flagged", {
+                id, tagName: el.tagName, reason: "ancestor", relatedTag: flagged.tagName,
+            });
+            return;
+        }
+        if (el.contains(flagged)) {
+            console.log("[ad-flagger] highlight: drop — already flagged", {
+                id, tagName: el.tagName, reason: "descendant", relatedTag: flagged.tagName,
+            });
+            return;
+        }
     }
 
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) {
-        // if already detached then defer to handleClassification
         if (!el.isConnected) {
+            console.log("[ad-flagger] highlight: drop — zero-rect and detached", {id, tagName: el.tagName});
             return;
         }
 
         // if element exists but zero-dim then retry when it has dimensions
+        let resolved = false;
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (entry.contentRect.width > 0 || entry.contentRect.height > 0) {
+                    resolved = true;
                     observer.disconnect();
                     highlightElement(id, el, explanation);
                     return;
                 }
             }
         });
-
         observer.observe(el);
 
-        setTimeout(() => observer.disconnect(), 10000); // stop retrying after 10s
+        setTimeout(() => {
+            if (resolved) return;
+            observer.disconnect();
+            console.log("[ad-flagger] highlight: drop — resize timeout", {
+                id, tagName: el.tagName, connected: el.isConnected,
+            });
+        }, 10000); // stop retrying after 10s
         return;
     }
 
@@ -196,18 +341,27 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
 
     const closeBtn = badge.querySelector(".ad-flagger-badge-x")!;
     const textNode = badge.childNodes[1] as Text;
-    badge.addEventListener("mouseenter", () => {
-        textNode.textContent = label + " ";
-    });
-    badge.addEventListener("mouseleave", () => {
-        textNode.textContent = "Suspicious ";
-    });
+    badge.addEventListener("mouseenter", () => { textNode.textContent = label + " "; });
+    badge.addEventListener("mouseleave", () => { textNode.textContent = "Suspicious "; });
     closeBtn.addEventListener("click", () => removeOverlay(id));
 
     overlay.appendChild(badge);
     positionOverlay(el, overlay);
     document.body.appendChild(overlay);
-    overlayMap.set(id, { el, overlay });
+
+    const isIframe = el.tagName.toLowerCase() === "iframe";
+    overlayMap.set(id, {el, overlay, lastSrc: isIframe ? el.getAttribute("src") : undefined});
+
+    console.log("[ad-flagger] highlight: drew overlay", {
+        id,
+        tagName: el.tagName,
+        rect: {
+            top: Math.round(rect.top),
+            left: Math.round(rect.left),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+        },
+    });
 }
 
 /**
@@ -312,8 +466,18 @@ function handleClassifications(classifications: ClassificationResult[]): void {
 
             // if inside iframe defer visual highlighting to parent
             if (window !== window.top) {
+                // TEMP (DEBUGGING)
+                console.log("[ad-flagger] subframe: dispatching iframeFlag", {
+                    packetId: result.id,
+                    frameUrl: window.location.href,
+                });
+
                 chrome.runtime.sendMessage(
-                    {type: "iframeFlag", explanation: result.explanation},
+                    {
+                        type: "iframeFlag",
+                        explanation: result.explanation,
+                        pageHostname: safeHostname(document.referrer) ?? "",
+                    },
                     () => void chrome.runtime.lastError
                 );
             } else {
@@ -415,8 +579,9 @@ function observeAdContainers() {
 
         // merge new elements into existing element map
         const startID = Math.max(...elementMap.keys(), -1) + 1;
+        const extractable = filterExtractable(newCandidates, DEFAULT_CONFIG);
         const newMap = new Map(
-            newCandidates.map((e, i) => [startID + i, e])
+            extractable.map((e, i) => [startID + i, e])
         );
 
         for (const [id, el] of newMap) {
@@ -533,17 +698,132 @@ if ((window as any).__suspiciousUiDetectorRan) {
             if (message.type === "iframeFlagRelay") {
                 if (window !== window.top) return
 
-                const sourceHost = safeHostname(message.sourceURL)
+                console.log("[ad-flagger] relay: received iframeFlagRelay", {
+                    sourceHost: safeHostname(message.sourceURL),
+                    flaggedSubframeUrlsSize: flaggedSubframeUrls.size,
+                });
+
+                const sourceHost = safeHostname(message.sourceURL);
                 if (!sourceHost) return;
 
-                const iframes = document.querySelectorAll("iframe");
-                for (const iframe of iframes) {
-                    const iframeHost = safeHostname(iframe.src)
-                    if (iframeHost && iframeHost == sourceHost) {
-                        const id = 10000 + Array.from(iframes).indexOf(iframe);
-                        highlightElement(id, iframe, message.explanation);
+                if (message.sourceURL && flaggedSubframeUrls.has(message.sourceURL)) {
+                    // find the overlay entry that currently claims this sourceURL
+                    let priorEntry: OverlayEntry | undefined;
+                    let priorId: number | undefined;
+                    for (const [id, entry] of overlayMap) {
+                        if (entry.sourceURL === message.sourceURL) {
+                            priorEntry = entry;
+                            priorId = id;
+                            break;
+                        }
+                    }
+
+                    // if the prior claim is still bound to a connected element, then dedup
+                    if (priorEntry && priorEntry.el.isConnected) {
+                        console.log("[ad-flagger] relay: drop — sourceURL in flaggedSubframeUrls", {
+                            sourceURL: message.sourceURL,
+                            priorId,
+                        });
+                        return;
+                    }
+
+                    // o.w. prior claim is stale (entry detached, or orphaned), then release
+                    // and fall through to iframe-lookup / rebind
+                    flaggedSubframeUrls.delete(message.sourceURL);
+                    if (priorEntry) priorEntry.sourceURL = undefined;
+
+                    console.log("[ad-flagger] relay: stale claim released — proceeding to rebind", {
+                        sourceURL: message.sourceURL,
+                        priorId: priorId ?? null,
+                        priorEntryFound: priorEntry !== undefined,
+                    });
+                }
+
+                const iframes = Array.from(document.querySelectorAll("iframe"));
+                const iframeHosts = iframes.map((f) => safeHostname(f.src));
+
+                // exact hostname match
+                let target: HTMLIFrameElement | null = null;
+                let targetIndex = -1;
+                let matchTier: "host" | "ad-family" | "none" = "none";  // TEMP (DEBUGGING)
+
+                const tier1Skipped: { index: number; host: string | null; reason: string }[] = [];
+                const tier2Skipped: { index: number; host: string | null; reason: string }[] = [];
+
+                for (let i = 0; i < iframes.length; i++) {
+                    if (iframeHosts[i] && iframeHosts[i] === sourceHost) {
+                        if (flaggedElements.has(iframes[i])) {
+                            tier1Skipped.push({ index: i, host: iframeHosts[i], reason: "in-flaggedElements" }); // TEMP (DEBUGGING)
+                            continue;
+                        }
+                        target = iframes[i];
+                        targetIndex = i;
+                        matchTier = "host"; // TEMP (DEBUGGING)
                         break;
                     }
+                }
+
+                // ad-network family match (fallback approach)
+                if (!target && isAdNetworkHost(sourceHost)) {
+                    for (let i = 0; i < iframes.length; i++) {
+                        const iframe = iframes[i];
+                        const iframeHost = iframeHosts[i];
+                        if (!iframeHost) {
+                            tier2Skipped.push({ index: i, host: null, reason: "no-host" }); // TEMP (DEBUGGING)
+                            continue;
+                        }
+
+                        if(!isAdNetworkHost(iframeHost)) {
+                            tier2Skipped.push({ index: i, host: iframeHost, reason: "not-ad-family" }); // TEMP (DEBUGGING)
+                            continue;
+                        }
+
+                        if (flaggedElements.has(iframe)) {
+                            tier2Skipped.push({ index: i, host: iframeHost, reason: "in-flaggedElements" }); // TEMP (DEBUGGING)
+                            continue;
+                        }
+
+                        target = iframe;
+                        targetIndex = i;
+                        matchTier = "ad-family";    // TEMP (DEBUGGING)
+                        break;
+                    }
+                }
+
+                if (target && targetIndex >= 0) {
+                    const id = SLOT_ID_BASE + targetIndex;
+                    const existing = overlayMap.get(id);
+
+                    // TEMP (DEBUGGING)
+                    if (existing && (existing.el !== target || !existing.el.isConnected)) {
+                        console.log("[ad-flagger] relay: rebind candidate", {
+                            slotId: id,
+                            matchTier,
+                            targetIndex,
+                            existingElDetached: !existing.el.isConnected,
+                            existingElIsSameNode: existing.el === target,
+                        });
+                    }
+
+                    if (message.sourceURL) flaggedSubframeUrls.add(message.sourceURL);
+
+                    highlightElement(id, target, message.explanation);
+
+                    if (message.sourceURL) {
+                        const entry = overlayMap.get(id);
+                        if (entry) entry.sourceURL = message.sourceURL;
+                    }
+                } else {
+                    // TEMP (DEBUGGING)
+                    console.log("[ad-flagger] relay: drop — no target found", {
+                        sourceURL: message.sourceURL,
+                        sourceHost,
+                        sourceHostIsAdFamily: isAdNetworkHost(sourceHost),
+                        iframeCount: iframes.length,
+                        iframeHosts,
+                        tier1Skipped,
+                        tier2Skipped,
+                    });
                 }
             }
         });
@@ -568,11 +848,18 @@ if ((window as any).__suspiciousUiDetectorRan) {
             }
         );
     }
+}
 
-    /** Helper that extracts domain from url */
-    function safeHostname(url?: string): string | null {
-        if (!url) return null;
-        try { return new URL(url).hostname; }
-        catch { return null;}
-    }
+/** Helper that extracts domain from url */
+function safeHostname(url?: string): string | null {
+    if (!url) return null;
+    try { return new URL(url).hostname; }
+    catch { return null;}
+}
+
+/** Helper that checks if hostname in ad-network family */
+function isAdNetworkHost(host: string | null): boolean {
+    if (!host) return false;
+    const h = host.toLowerCase();
+    return AD_NETWORK_SUFFIXES.some((suffix) => h === suffix || h.endsWith("." + suffix));
 }
