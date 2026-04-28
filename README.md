@@ -91,7 +91,10 @@ Debug mode showing benign element classification (queued → processing → safe
 
 [![Debug mode demo](demo/debug-mode.gif)](demo/debug-mode.gif)
 
-> Validation against representative file-hosting sites (APK Mirror, MediaFire) and 8 HTML fixtures was performed during development. Re-validation against the latest prompt and pipeline changes is pending.
+Validated across 11 HTML fixtures and 9 real-world sites spanning software repositories, file-hosting services, and 
+niche utility pages. Aggregate macro precision 0.65, macro recall 0.75 against Qwen3-4B running on-device via WebLLM. 
+Per-site precision/recall, methodology, and notes on outliers (MediaFire's heavy SafeFrame ad rotation; i2Symbol's 
+over-flagging false-positive pattern) are in [VALIDATION.md](VALIDATION.md).
 
 ## Testing
 
