@@ -24,26 +24,46 @@ Located at `tests/integration/fixtures/`. Loaded by the Playwright suite via the
 
 Used for manual classification review. Re-run after any prompt or pipeline change.
 
+*Software Repositories*
 - apkmirror.com
-- mediafire.com
-- stickpng.com
-- pngtree.com
-- pngegg.com
-- pngwing.com
 - apkcombo.com
 - filehippo.com
-- filecr.com
-- y2mate.com
+- softpedia.com
+
+*File Sharing Services and Torrent Sites*
+- mediafire.com
+- thepiratebay.org
+
+*Niche and Content-Specific Sites*
+- color-picker.dllplayer.com
+- greeksymbols.net
+- i2symbol.com
+
+## Results
+
+A true positive (TP) corresponds to a disguised ad that is correctly classified as such and rendered
+with a visual overlay. A false positive (FP) refers to an HTML element that is flagged as deceptive with a
+visual overlay but is actually benign. A false negative (FN) occurs when a disguised ad is either classified
+as safe or is never classified to begin with.
+
+| Site                       | Model    | Date    | TP | FP | FN | Precision | Recall    | Notes                                      |
+|----------------------------|----------|---------|----|----|----|-----------|-----------|--------------------------------------------|
+| apkmirror.com              | Qwen3-4B | 4/28/26 | 4  | 0  | 1  | 1.0       | 0.8       | dense Android APK repo                     |
+| apkcombo.com               | Qwen3-4B | 4/28/26 | 0  | 2  | 2  | 0.0       | 0.0       | 3rd party Android APK repo                 |
+| filehippo.com              | Qwen3-4B | 4/28/26 | 3  | 0  | 0  | 1.0       | 1.0       | curated Windows freeware portal            |
+| softpedia.com              | Qwen3-4B | 4/28/26 | 2  | 3  | 0  | 0.4       | 1.0       | Windows/Mac freeware directory             |
+| mediafire.com              | Qwen3-4B | 4/28/26 | 1  | 0  | 3  | 1.0       | 0.25 [^1] | cloud file-hosting; heavy ad rotation      |
+| thepiratebay.org           | Qwen3-4B | 4/28/26 | 2  | 1  | 1  | 0.67      | 0.67      | BitTorrent magnet-link index               |
+| color-picker.dllplayer.com | Qwen3-4B | 4/28/26 | 2  | 0  | 0  | 1.0       | 1.0       | low-traffic browser extension landing page |
+| greeksymbols.net           | Qwen3-4B | 4/28/26 | 3  | 2  | 0  | 0.6       | 1.0       | Greek alphabet reference; AdSense          |
+| i2symbol.com               | Qwen3-4B | 4/28/26 | 1  | 4  | 0  | 0.2 [^2]  | 1.0       | Unicode symbol/emoji copy & paste tool     |
 
 
-[//]: # (TODO: Resolve final sprint bugs that caused decrease in accuracy among real sites)
-<!--
-## Recording results
+**Aggregate results:** Macro precision $\approx 0.65 ~~$ Macro recall $\approx$ 0.75
 
-For each revalidation pass, log model, prompt revision, date, and per-site TP / FP / FN. Suggested table:
+---
 
-| Site | Model | Date    | TP | FP | FN | Notes                                      |
-|---|---|---------|---|---|---|--------------------------------------------|
-| apkmirror.com | Qwen3-4B | 4/26/25 | 4 | 0 | 3 | dense page surpasses element count config param |
-| mediafire.com | Qwen3-4B | 4/26/25 | 5 | 1 | 0 | persistent nav link resembling an ad       |
--->
+[^1]: MediaFire's recall reflects the SafeFrame iframe rotation pattern, where the same outer container cycles
+through multiple ad creatives faster than overlays can rebind without scroll activity.
+[^2]: i2Symbol's FPs come from the SLM over-flagging on benign ads that share some overlap with deceptive ad
+patterns prioritized in the system prompt.
