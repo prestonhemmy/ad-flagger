@@ -168,6 +168,7 @@ function repositionAllOverlays() {
                 // if relayed, release sourceURL for a later rebinding
                 if (entry.sourceURL) {
                     flaggedSubframeUrls.delete(entry.sourceURL);
+                    entry.sourceURL = undefined;
                 }
 
                 console.log("[ad-flagger] reposition: soft-hidden slot", {
