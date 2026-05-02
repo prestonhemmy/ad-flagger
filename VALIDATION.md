@@ -1,6 +1,8 @@
 # Validation
 
-Reference for the test fixtures shipped with the integration suite and the real-world sites used for manual spot-checks during development. Use this file to track classification results across model and prompt revisions.
+Reference for the test fixtures shipped with the integration suite and the real-world sites used for manual
+spot-checks during development. Use this file to track classification results across model and prompt 
+revisions.
 
 ## Integration fixtures
 
@@ -41,9 +43,9 @@ Used for manual classification review. Re-run after any prompt or pipeline chang
 
 ## Results
 
-A true positive (TP) corresponds to a disguised ad that is correctly classified as such and rendered
-with a visual overlay. A false positive (FP) refers to an HTML element that is flagged as deceptive with a
-visual overlay but is actually benign. A false negative (FN) occurs when a disguised ad is either classified
+A true positive (TP) corresponds to a disguised ad that is correctly classified and rendered with a visual 
+overlay. A false positive (FP) refers to an HTML element that is flagged as deceptive and visually 
+highlighted but is actually benign. A false negative (FN) occurs when a disguised ad is either classified
 as safe or is never classified to begin with.
 
 | Site                       | Model    | Date    | TP | FP | FN | Precision | Recall    | Notes                                      |
